@@ -89,9 +89,11 @@ Natives names and parameters are self-explanatory, but you must first understand
 
     2.2 If server is disconnected, SteamCore first will attempt to login and then execute the request.
 
-3.1 If the request is successful an `errorCode = 0` will be returned on the callback call.
+3. Request is executed.
 
-3.2 If the request fails it will be retried one more time, this means SteamCore tries to execute the request 2 times before calling the callback with an error.
+    3.1 If the request is successful an `errorCode = 0` will be returned on the callback call.
+
+    3.2 If the request fails it will be retried one more time, this means SteamCore tries to execute the request 2 times before calling the callback with an error.
 
 **IMPORTANT NOTES:**
 
