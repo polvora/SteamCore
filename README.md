@@ -15,7 +15,7 @@ SteamCore makes use of an account to send requests to Steam server as a normal u
 * `sc_password` Steam account password.
 
 #### Alternative
-* `sc_debug` Toggles debug mode.
+* `sc_debug` Toggles debug mode _(Default = 0)_.
 
 ### Install
 #### Requirements
