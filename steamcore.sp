@@ -77,9 +77,9 @@ public OnPluginStart()
 	hTimeIncreaser = CreateTimer(TIMER_UPDATE_TIME*60.0, timeIncreaser, INVALID_HANDLE, TIMER_REPEAT);
 	
 	// Convars
-	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED);
-	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED);
-	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.");
+	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED | FCVAR_PLUGIN);
+	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED | FCVAR_PLUGIN);
+	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	HookConVarChange(cvarUsername, OnLoginInfoChange);
 	HookConVarChange(cvarPassword, OnLoginInfoChange);
@@ -358,7 +358,7 @@ public cbkLoginRequest(HTTPRequestHandle:response, bool:requestSuccessful, HTTPS
 	if (strcmp(successString, "true") != 0) // successString != true
 	{
 		PrintDebug(caller, "Aborted logging, incorrect response body (%i): \n%s", strlen(responseBody), responseBody);
-		onRequestResult(caller, false, 0x06); // Incorrect login data or required captcha or e-mail confirmation (Steam Guard)
+		onRequestResult(caller, false, 0x06); // Incorrect login data, required captcha or e-mail confirmation (Steam Guard)
 		return;
 	}
 	
