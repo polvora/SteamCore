@@ -7,7 +7,7 @@ This is not an actual plugin, it's a library for other plugins to work and it do
 ## For Server Owners
 SteamCore makes use of an account to send requests to Steam server as a normal user would do.Create a new Steam account, login in Steam client and deactivate Steam Guard. 
 
-**You should not use your personal account for this, since it could be flagged as an spam bot.**
+**You should not use your personal account for this, since it could be flagged as spam bot.**
 
 ### Cvars
 #### Mandatory
