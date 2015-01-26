@@ -5,7 +5,7 @@ Sourcemod natives that extends the functionality of Pawn to interact with common
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
 
 ## For Server Owners
-SteamCore makes use of an account to send requests to Steam server as a normal user would do.Create a new Steam account, login in Steam client and deactivate Steam Guard. 
+SteamCore makes use of an account to send requests to Steam server as a normal user would do. Create a new Steam account, login in Steam client and deactivate Steam Guard. 
 
 **You should not use your personal account for this, since it could be flagged as spam bot.**
 
