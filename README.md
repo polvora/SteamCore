@@ -127,3 +127,8 @@ A very basic working code:
         if (success) PrintToChat(client, "Success!!!");
         else PrintToChat(client, "Failure :(");
     }
+	
+###Changelog
+> [04/02/2015] v1.0 
+
+> * Initial Release.
