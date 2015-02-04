@@ -22,7 +22,7 @@ SteamCore makes use of an account to send requests to Steam server as a normal u
 * [A working version of Sourcemod](http://www.sourcemod.net/downloads.php).
 * [SteamTools extension](https://forums.alliedmods.net/showthread.php?t=170630).
 
-Just copy `steamtools.smx` to the `plugins` folder in your Sourcemod directory.
+Just copy `steamcore.smx` to the `plugins` folder in your Sourcemod directory.
 
 ### Download
 Compiled version: [steamcore.smx][1]. Also available in downloads section.
