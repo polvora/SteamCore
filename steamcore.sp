@@ -81,7 +81,7 @@ public OnPluginStart()
 	hTimeIncreaser = CreateTimer(TIMER_UPDATE_TIME*60.0, timeIncreaser, INVALID_HANDLE, TIMER_REPEAT);
 	
 	// Convars
-	CreateConVar("steamcore_version", PLUGIN_VERSION, "SteamCode Version", FCVAR_PLUGIN | FCVAR_SPONLY | FCVAR_DONTRECORD | FCVAR_NOTIFY);
+	CreateConVar("steamcore_version", PLUGIN_VERSION, "SteamCore Version", FCVAR_PLUGIN | FCVAR_SPONLY | FCVAR_DONTRECORD | FCVAR_NOTIFY);
 	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED | FCVAR_PLUGIN);
 	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED | FCVAR_PLUGIN);
 	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
