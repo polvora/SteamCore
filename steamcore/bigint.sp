@@ -5,7 +5,7 @@ Version: 0.1
 Date: 28-12-2014
 Author: Statik
 
-Provide some arithmetic and logical maths functions to operate 
+Provides some arithmetic and logical maths functions to operate 
 with big integers.
 
 **UNFINISHED**
