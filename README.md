@@ -120,6 +120,7 @@ Also available on `steamcore.inc`.
 	0x22: Invite Error: Incorrect Group ID or missing data.
 	0x23: Invite Error: Logged out. Retry to login.
 	0x24: Invite Error: Account is limited.
+	0x25: Invite Error: Invitee has already received an invite or is already on the group.
 
 ###Internal Processing of a Request
 Natives names and parameters are self-explanatory, but you can first understand the internal processing of a request:
