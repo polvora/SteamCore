@@ -12,7 +12,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 
@@ -681,16 +681,20 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 			PrintDebug(caller, "Invite failed. Plugin is not logged in. Try again to login.");
 			onRequestResult(caller, false, 0x23); // Logged out. Retry to login
 		}
-		else if (StrEqual(result, "You do not have permission to invite to the group specified.") ||
-			StrEqual(result, "Your account does not meet the requirements to use this feature. <a class=\"whiteLink\" target=\"_blank\" href=\"https://support.steampowered.com/kb_article.php?ref=3330-IAGK-7663\">Visit Steam Support</a> for more information."))	
+		else if (StrEqual(result, "You do not have permission to invite to the group specified.")
+		{
+			PrintDebug(caller, "Invite failed. Inviter account is not a member of the group or does not have permissions to invite.");
+			onRequestResult(caller, false, 0x24); // Account does not have permissions to invite.
+		}
+		else if StrEqual(result, "Your account does not meet the requirements to use this feature. <a class=\"whiteLink\" target=\"_blank\" href=\"https://support.steampowered.com/kb_article.php?ref=3330-IAGK-7663\">Visit Steam Support</a> for more information."))
 		{
 			PrintDebug(caller, "Invite failed. Account is limited, only full Steam accounts can send group invites.");
-			onRequestResult(caller, false, 0x24); // Limited account. Only full Steam accounts can send Steam group invites
+			onRequestResult(caller, false, 0x25); // Limited account. Only full Steam accounts can send Steam group invites
 		}
 		else
 		{
 			PrintDebug(caller, "Invite failed. Unknown error response received when sending the group invite.");
-			onRequestResult(caller, true);
+			onRequestResult(caller, false, 0x26); // Unknown error
 		}
 	}
 	else
@@ -698,7 +702,7 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 		if (StrContains(responseBody, "<duplicate><![CDATA[1]]></duplicate>") != -1)
 		{
 			PrintDebug(caller, "Invite failed. Invitee has already received an invite or is already on the group.");
-			onRequestResult(caller, false, 0x25); // Invitee has already received an invite or is already on the group.
+			onRequestResult(caller, false, 0x27); // Invitee has already received an invite or is already on the group.
 		}
 		else
 		{
