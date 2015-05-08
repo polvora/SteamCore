@@ -177,18 +177,18 @@ A very basic working code:
         else PrintToChat(client, "Failure :(");
     }
 	
-###Changelog
+> ###Changelog
 > [04/02/2015] v1.0 
 
 > * Initial Release.
 
 > [29/03/2015] v1.1
 
-> * Fixed critical bug that made announcements stopped working after a few calls.
+> * _Announcement Module:_ Fixed critical bug that made announcements stopped working after a few calls.
 > * Added a timeout error code.
 > * Added the native isSteamCoreBusy to check if there is a request being executed.
 > * Eliminated the retry function in all requests.
-> * Changed steamGroupAnnoucement function name to SteamGroupAnnouncement for convention purposes.
+> * _Announcement Module:_ Changed steamGroupAnnoucement function name to SteamGroupAnnouncement for convention purposes.
 
 > [13/04/2015] v1.2
 
@@ -197,4 +197,9 @@ A very basic working code:
 > [03/05/2015] v1.3
 
 > * Added compatibility with most source games, instead of only TF2.
-> * SteamTools extension is no longer needed. Instead, SteamWorks is now required.
+> * **SteamTools extension is no longer needed. Instead, SteamWorks is now required.**
+
+> [08/06/2015] v1.4
+
+> * _Invite Module:_ Permissions errors and Limited account error are now differentiated.
+> * _Invite Module:_ Fixed the unknown errors being called as success and added an errorCode for them (0x26).
