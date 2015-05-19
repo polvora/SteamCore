@@ -12,7 +12,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.4"
+#define PLUGIN_VERSION "1.5"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 
@@ -405,12 +405,16 @@ public cbkRsaKeyRequest(Handle:response, bool:failure, bool:requestSuccessful, E
 	
 	PrintDebug(caller, "Logging in to steamcommunity.com/login/dologin/...");
 	request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, "https://steamcommunity.com/login/dologin/");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "username", username);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "password", encryptedPassword);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "rsatimestamp", steamTimestamp);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "username", username);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "twofactorcode", "");
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "emailauth", "");
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "loginfriendlyname", "");
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "captchagid", "");
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "captcha_text", "");
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "emailsteamid", "");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "remember_login", "1");
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "rsatimestamp", steamTimestamp);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "remember_login", "false");
 	SteamWorks_SetHTTPCallbacks(request, cbkLoginRequest);
 	SteamWorks_SendHTTPRequest(request);
 	startTimeoutTimer();

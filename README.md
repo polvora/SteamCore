@@ -1,5 +1,7 @@
 #SteamCore
 
+_If you see a bug, want to add a new feature or want me to make a change, you should create an issue [here](https://bitbucket.org/Polvora/steamcore/issues/new)._
+
 Sourcemod natives that extends the functionality of Pawn to interact with common Steam functions.
 
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
@@ -199,7 +201,11 @@ A very basic working code:
 > * Added compatibility with most source games, instead of only TF2.
 > * **SteamTools extension is no longer needed. Instead, SteamWorks is now required.**
 
-> [08/06/2015] v1.4
+> [08/05/2015] v1.4
 
 > * _Invite Module:_ Permissions errors and Limited account error are now differentiated.
 > * _Invite Module:_ Fixed the unknown errors being called as success and added an errorCode for them (0x26).
+
+> [18/05/2015] v1.5
+
+> * **Fixed critical bug that prevented logging in on Steam.**
