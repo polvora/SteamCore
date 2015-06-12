@@ -12,7 +12,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.5"
+#define PLUGIN_VERSION "1.5.1"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 
@@ -29,7 +29,7 @@ new bool:DEBUG = false;
 
 new const TIMER_UPDATE_TIME = 6;
 new const TOKEN_LIFETIME = 50;
-new const Float:TIMEOUT_TIME = 5.0;
+new const Float:TIMEOUT_TIME = 10.0;
 
 new Handle:cvarUsername;
 new Handle:cvarPassword;
