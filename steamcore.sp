@@ -253,7 +253,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 		return;
 	}
 	
-	request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, "http://steamcommunity.com/login/getrsakey/");
+	request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, "http://steamcommunity.com/login/getrsakey/");
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "username", username);
 	SteamWorks_SetHTTPCallbacks(request, cbkRsaKeyRequest);
 	SteamWorks_SendHTTPRequest(request);

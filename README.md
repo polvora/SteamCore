@@ -213,3 +213,7 @@ A very basic working code:
 > [12/06/2015] v1.5.1
 
 > * Increased timeout time for requests to 10 seconds (previously 5 seconds).
+
+> [17/08/2015] v1.6
+
+> * **Fixed critical bug that prevented logging in on Steam.** 
