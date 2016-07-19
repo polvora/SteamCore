@@ -1,6 +1,6 @@
 #SteamCore
 
-_If you see a bug, want to add a new feature or want me to make a change, you should create an issue [here](https://bitbucket.org/Polvora/steamcore/issues/new)._
+_If you see a bug, want to add a new feature or want me to make a change, you should create an issue [here](https://github.com/polvora/SteamCore/issues/new)._
 
 Sourcemod natives that extends the functionality of Pawn to interact with common Steam functions.
 
