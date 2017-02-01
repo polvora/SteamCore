@@ -81,10 +81,10 @@ public OnPluginStart()
 	hTimeIncreaser = CreateTimer(TIMER_UPDATE_TIME*60.0, timeIncreaser, INVALID_HANDLE, TIMER_REPEAT);
 	
 	// Convars
-	CreateConVar("steamcore_version", PLUGIN_VERSION, "SteamCore Version", FCVAR_PLUGIN | FCVAR_SPONLY | FCVAR_DONTRECORD | FCVAR_NOTIFY);
-	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED | FCVAR_PLUGIN);
-	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED | FCVAR_PLUGIN);
-	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	CreateConVar("steamcore_version", PLUGIN_VERSION, "SteamCore Version", FCVAR_SPONLY | FCVAR_DONTRECORD | FCVAR_NOTIFY);
+	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED);
+	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED);
+	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.", 0, true, 0.0, true, 1.0);
 	
 	HookConVarChange(cvarUsername, OnLoginInfoChange);
 	HookConVarChange(cvarPassword, OnLoginInfoChange);
@@ -160,6 +160,8 @@ public nativeGroupAnnouncement(Handle:plugin, numParams)
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "sessionID", sessionToken);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "headline", title);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "body", body);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "languages[0][headline]", title);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "languages[0][body]", body);
 	
 	startRequest(client, _finalRequest, cbkGroupAnnouncement, plugin, Function:GetNativeCell(5));
 }
@@ -213,7 +215,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 			CreateDataTimer(0.1, tmrBusyCallback, datapack);
 			WritePackCell(datapack, client);
 			WritePackCell(datapack, pluginIteratorNumber);
-			WritePackCell(datapack, _callbackFunction);
+			WritePackFunction(datapack, Function:_callbackFunction);
 			
 			CloseHandle(_finalRequest);
 		}
@@ -291,7 +293,7 @@ public Action:tmrBusyCallback(Handle:timer, Handle:pack)
 	new client = ReadPackCell(pack);
 	new pluginIteratorNumber = ReadPackCell(pack);
 	new Handle:callbackPl = FindPluginFromNumber(pluginIteratorNumber);
-	new Function:callbackFunc = ReadPackCell(pack);
+	new Function:callbackFunc = ReadPackFunction(pack);
 	
 	new bool:success = RemoveFromForward(callbackHandle, callbackPlugin, callbackFunction);
 	new functionCount = GetForwardFunctionCount(callbackHandle);
