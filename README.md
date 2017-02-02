@@ -42,9 +42,9 @@ SteamCore makes use of an account to send requests to Steam server as a normal u
 To install just copy `steamcore.smx` to the `plugins` folder in your Sourcemod directory.
 
 ###Download
-Compiled version: [steamcore.smx][1]. Available in downloads section.
+Compiled versions: [steamcore.smx][1].
 
-[1]: https://bitbucket.org/Polvora/steamcore/downloads/steamcore.smx
+[1]: https://github.com/polvora/SteamCore/releases
 
 If you want to compile the code yourself, you must use the offline compiler, and copy `steamcore.sp`, `steamcore/bigint.sp` and `steamcore/rsa.sp` to the scripting folder in your Sourcemod directory, also you need to copy the include file from SteamWorks to scripting/include.
 
@@ -217,3 +217,8 @@ A very basic working code:
 > [17/08/2015] v1.6
 
 > * **Fixed critical bug that prevented logging in on Steam.** 
+
+> [02/02/2017] v1.7
+
+> * _Announcement Module:_ **Fixed critical bug caused by outdated method to post announcements.**
+> * **Fixed critical bug that crashed the plugin when making a request while plugin is busy.**
