@@ -12,7 +12,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.7"
+#define PLUGIN_VERSION "1.7.1"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 
@@ -671,6 +671,9 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 	
 	if (!StrEqual(result, "OK"))
 	{
+		PrintDebug(caller, "Error: ");
+		PrintDebug(caller, result);
+		
 		if (StrEqual(result, "The invitation to that player failed. Please try again.\n\nError code: 19"))
 		{
 			PrintDebug(caller, "Invite failed. Incorrect invitee id on request or another error.");
