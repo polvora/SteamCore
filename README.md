@@ -1,4 +1,4 @@
-#SteamCore
+# SteamCore
 
 _If you see a bug, want to add a new feature or want me to make a change, you should create an issue [here](https://github.com/polvora/SteamCore/issues/new)._
 
@@ -6,7 +6,7 @@ Sourcemod natives that extends the functionality of Pawn to interact with common
 
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
 
-####Table of Contents 
+#### Table of Contents 
 * [Server Owners](#markdown-header-for-server-owners)
 	* [Cvars](#markdown-header-cvars)
 		* [Mandatory](#markdown-header-mandatory)
@@ -21,37 +21,37 @@ This is not an actual plugin, it's a library for other plugins to work and it do
 	* [Demo Code](#markdown-header-demo-code)
 * [Changelog](#markdown-header-changelog)
 
-##For Server Owners
+## For Server Owners
 SteamCore makes use of an account to send requests to Steam server as a normal user would do. Create a new Steam account, **login on a Steam client and deactivate Steam Guard**. 
 
 **You should not use your personal account for this, it could be flagged as a spam bot.**
 
-###Cvars
-####Mandatory
+### Cvars
+#### Mandatory
 * `sc_username` Steam account user.  
 * `sc_password` Steam account password.
 
-####Alternative
+#### Alternative
 * `sc_debug` Toggles debug mode _(Default = 0)_.
 
-###Install
-####Requirements
+### Install
+#### Requirements
 * [A working version of Sourcemod](http://www.sourcemod.net/downloads.php).
 * [SteamWorks extension](https://forums.alliedmods.net/showthread.php?t=229556).
 
 To install just copy `steamcore.smx` to the `plugins` folder in your Sourcemod directory.
 
-###Download
+### Download
 Compiled versions: [steamcore.smx][1].
 
 [1]: https://github.com/polvora/SteamCore/releases
 
 If you want to compile the code yourself, you must use the offline compiler, and copy `steamcore.sp`, `steamcore/bigint.sp` and `steamcore/rsa.sp` to the scripting folder in your Sourcemod directory, also you need to copy the include file from SteamWorks to scripting/include.
 
-##For Scripts Writers
+## For Scripts Writers
 You must add `steamcore.inc` inside your `include` folder in order to use SteamCore natives.
 
-###Natives
+### Natives
 Also available on `steamcore.inc`.
 	
 	/**
@@ -98,7 +98,7 @@ Also available on `steamcore.inc`.
 	 */
 	native SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
 
-###Error Codes
+### Error Codes
 Also available on `steamcore.inc`.
 
 	0x00: No error, request successful.
@@ -127,7 +127,7 @@ Also available on `steamcore.inc`.
 	0x26: Invite Error: Unknown error.
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
 
-###Internal Processing of a Request
+### Internal Processing of a Request
 Natives names and parameters are self-explanatory, but you can first understand the internal processing of a request:
 
 - When a request is made, SteamCore will first check if another request is being executed, if true, the callback function will be _almost automatically_ called (0.1 seconds delay) with `errorCode = 1`. If there is no another request being executed it will continue to the next step.
@@ -155,7 +155,7 @@ Natives names and parameters are self-explanatory, but you can first understand 
 
 * It's possible that SteamCore fails a request when believing that it's logged in and it is not, this usually happens when an user logs out the Steam account from a web browser, therefore ending any active session on that account.
 
-###Demo Code
+### Demo Code
 A very basic working code:
 
 	#include <steamcore>
@@ -179,7 +179,7 @@ A very basic working code:
         else PrintToChat(client, "Failure :(");
     }
 	
-> ###Changelog
+> ### Changelog
 > [04/02/2015] v1.0 
 
 > * Initial Release.
