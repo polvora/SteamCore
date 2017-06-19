@@ -124,8 +124,11 @@ Also available on `steamcore.inc`.
 	0x23: Invite Error: Logged out. Retry to login.
 	0x24: Invite Error: Inviter account is not a member of the group or does not have permissions to invite.
 	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
-	0x26: Invite Error: Unknown error.
+	0x26: Invite Error: Unknown error. *Check link below
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
+	
+
+[`Error 0x26`](https://github.com/polvora/SteamCore/issues/6)
 
 ### Internal Processing of a Request
 Natives names and parameters are self-explanatory, but you can first understand the internal processing of a request:
