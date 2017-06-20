@@ -31,6 +31,8 @@ SteamCore makes use of an account to send requests to Steam server as a normal u
 * `sc_username` Steam account user.  
 * `sc_password` Steam account password.
 
+_Use alphanumeric user/pass, max length: 32 characters._
+
 #### Alternative
 * `sc_debug` Toggles debug mode _(Default = 0)_.
 
@@ -109,7 +111,7 @@ Also available on `steamcore.inc`.
 	0x04: Login Error: Failed http RSA Key request.
 	0x05: Login Error: RSA Key response failed, unknown reason, probably server side.
 	0x06: Login Error: Failed htpps login request.
-	0x07: Login Error: Incorrect login data, required captcha or e-mail confirmation (Steam Guard).
+	0x07: Login Error: Incorrect login data OR required captcha OR e-mail confirmation (Steam Guard).
 	0x08: Login Error: Failed http token request.
 	0x09: Login Error: Invalid session token. Incorrect cookie?.
 	
