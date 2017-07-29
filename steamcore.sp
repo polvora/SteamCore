@@ -210,6 +210,8 @@ public nativeGroupInvite(Handle:plugin, numParams)
 // ===================================================================================
 // ===================================================================================
 
+new Handle:busy_Plugin;
+new Function:busy_Function;
 startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_finalFunction, Handle:_callbackPlugin, Function:_callbackFunction)
 {		
 	if (isBusy)
@@ -219,13 +221,9 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 		
 		if (_callbackFunction != INVALID_FUNCTION) // There is an actual function callback
 		{
-			new pluginIteratorNumber = GetPluginIteratorNumber(_callbackPlugin);
-			new Handle:datapack;
-			CreateDataTimer(0.1, tmrBusyCallback, datapack);
-			WritePackCell(datapack, client);
-			WritePackCell(datapack, pluginIteratorNumber);
-			WritePackFunction(datapack, Function:_callbackFunction);
-			
+			busy_Plugin = _callbackPlugin;
+			busy_Function = _callbackFunction;
+			CreateTimer(0.1, tmrBusyCallback, client);
 			CloseHandle(_finalRequest);
 		}
 		return;
@@ -296,45 +294,31 @@ public Action:tmrTimeout(Handle:timer)
 	timeoutTimer = INVALID_HANDLE;
 }
 
-public Action:tmrBusyCallback(Handle:timer, Handle:pack)
+public Action:tmrBusyCallback(Handle:timer, any:client)
 {
-	ResetPack(pack);
-	new client = ReadPackCell(pack);
-	new pluginIteratorNumber = ReadPackCell(pack);
-	new Handle:callbackPl = FindPluginFromNumber(pluginIteratorNumber);
-	new Function:callbackFunc = ReadPackFunction(pack);
+	PrintDebug(client, "Calling busy callback...");
 	
-	new bool:success = RemoveFromForward(callbackHandle, callbackPlugin, callbackFunction);
-	new functionCount = GetForwardFunctionCount(callbackHandle);
-	PrintDebug(caller, "Removing main callback from forward - Result: %i, - Forward Function Count: %i", success, functionCount);
+	if (busy_Plugin != INVALID_HANDLE && busy_Function != INVALID_FUNCTION)
+	{
+		// Start function call
+		Call_StartFunction(busy_Plugin, busy_Function);
+		// Push parameters one at a time
+		Call_PushCell(client);
+		Call_PushCell(false);
+		Call_PushCell(0x01); // Plugin is busy
+		Call_PushCell(0);
+		// Finish the call
+		new result = Call_Finish();
+		PrintDebug(client, "Callback call result: %i (0: success)", result);
+	}
+	else
+	{
+		PrintDebug(client, "Plugin unloaded. Callback failed.");
+	}
 	
-	success = AddToForward(callbackHandle, callbackPl, callbackFunc);
-	functionCount = GetForwardFunctionCount(callbackHandle);
-	PrintDebug(caller, "Adding temporal callback from forward - Result: %i, - Forward Function Count: %i", success, functionCount);
-	
-	// Start function call
-	Call_StartForward(callbackHandle);
-	// Push parameters one at a time
-	Call_PushCell(client);
-	Call_PushCell(false);
-	Call_PushCell(0x01); // Plugin is busy
-	Call_PushCell(0);
-	// Finish the call
-	new result = Call_Finish();
-	PrintDebug(caller, "Temporal callback calling error code: %i (0: Success)", result);
-	
-	success = RemoveFromForward(callbackHandle, callbackPl, callbackFunc);
-	functionCount = GetForwardFunctionCount(callbackHandle);
-	PrintDebug(caller, "Removing temporal callback from forward - Result: %i, - Forward Function Count: %i", success, functionCount);
-	
-	success = AddToForward(callbackHandle, callbackPlugin, callbackFunction);
-	functionCount = GetForwardFunctionCount(callbackHandle);
-	PrintDebug(caller, "Re-adding main callback from forward - Result: %i, - Forward Function Count: %i", success, functionCount);
-	
-	callbackPl = INVALID_HANDLE;
-	callbackFunc = INVALID_FUNCTION;
-	
-	PrintDebug(caller, "Task rejected.");
+	busy_Plugin = INVALID_HANDLE;
+	busy_Function = INVALID_FUNCTION;
+	PrintDebug(client, "Task rejected.");
 }
 
 public cbkRsaKeyRequest(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
@@ -843,18 +827,23 @@ public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const Stri
 	
 	PrintDebug(client, "Member %sfound in database.", isMember?"":"NOT ");
 	
-	// Start function call
-	Call_StartFunction(checkMembershipFromStorage_Plugin, checkMembershipFromStorage_Function);
-	// Push parameters one at a time
-	Call_PushCell(client); // Client
-	Call_PushCell(success); // Success
-	Call_PushCell(errorCode); // Error code
-	Call_PushCell(isMember); // Extra data
-	// Finish the call
-	Call_Finish();
+	if (checkMembershipFromStorage_Plugin != INVALID_HANDLE && checkMembershipFromStorage_Function != INVALID_FUNCTION)
+	{
+		// Start function call
+		Call_StartFunction(checkMembershipFromStorage_Plugin, checkMembershipFromStorage_Function);
+		// Push parameters one at a time
+		Call_PushCell(client); // Client
+		Call_PushCell(success); // Success
+		Call_PushCell(errorCode); // Error code
+		Call_PushCell(isMember); // Extra data
+		// Finish the call
+		Call_Finish();
+	}
 	
 	CloseHandle(connection);
 	connection = INVALID_HANDLE;
+	checkMembershipFromStorage_Plugin = INVALID_HANDLE;
+	checkMembershipFromStorage_Function = INVALID_FUNCTION;
 }
 
 
@@ -1093,48 +1082,6 @@ removeCallback()
 	new functionCount = GetForwardFunctionCount(callbackHandle);
 	PrintDebug(caller, "Removing callback from forward - Result: %i, - Forward Function Count: %i", removed, functionCount);
 	callbackFunction = INVALID_FUNCTION;
-}
-
-// ===================================================================================
-// ===================================================================================
-
-// Obtains the plugin index in a plugin iterator
-GetPluginIteratorNumber(Handle:plugin)
-{
-	new pluginNumber = 0;
-	decl String:pluginName[256];
-	decl String:auxPluginName[256];
-	GetPluginFilename(plugin, pluginName, sizeof(pluginName));
-	new Handle:pluginIterator = GetPluginIterator();
-	while (MorePlugins(pluginIterator))
-	{
-		pluginNumber++;
-		GetPluginFilename(ReadPlugin(pluginIterator), auxPluginName, sizeof(auxPluginName));
-		if (StrEqual(pluginName, auxPluginName)) break;
-	}
-	CloseHandle(pluginIterator);
-	pluginIterator = INVALID_HANDLE;
-	
-	return pluginNumber;
-}
-
-Handle:FindPluginFromNumber(pluginNumber)
-{
-	new Handle:pluginIterator = GetPluginIterator();
-	new Handle:plugin;
-	for (new i = 0; i < pluginNumber; i++)
-	{
-		if (!MorePlugins(pluginIterator))
-		{
-			plugin = INVALID_HANDLE;
-			break;
-		}
-		plugin = ReadPlugin(pluginIterator);
-	}
-	CloseHandle(pluginIterator);
-	pluginIterator = INVALID_HANDLE;
-	
-	return plugin;
 }
 
 // ===================================================================================
