@@ -12,7 +12,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.7.1"
+#define PLUGIN_VERSION "1.8"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 
@@ -57,6 +57,10 @@ new Function:callbackFunction;
 new Handle:finalRequest;
 new SteamWorksHTTPRequestCompleted:finalFunction;
 
+// Lazy Globals
+new String:groupCheck[128];
+new Handle:dbConnection;
+
 // ===================================================================================
 // ===================================================================================
 
@@ -66,6 +70,9 @@ public APLRes:AskPluginLoad2(Handle:plugin, bool:late, String:error[], err_max)
 	CreateNative("IsSteamCoreBusy", nativeIsSteamCoreBusy);
 	CreateNative("SteamGroupAnnouncement", nativeGroupAnnouncement);
 	CreateNative("SteamGroupInvite", nativeGroupInvite);
+	CreateNative("SteamGroupCheckMembershipFromProfile", nativeCheckMembershipFromProfile);
+	CreateNative("SteamGroupCheckMembershipFromStorage", nativeCheckMembershipFromStorage);
+	CreateNative("SteamGroupStoreMembersList", nativeStoreMembersList);
 	
 	RegPluginLibrary("steamcore");
 	
@@ -198,6 +205,8 @@ public nativeGroupInvite(Handle:plugin, numParams)
 	startRequest(client, _finalRequest, cbkGroupInvite, plugin, Function:GetNativeCell(4));
 }
 
+
+
 // ===================================================================================
 // ===================================================================================
 
@@ -239,7 +248,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 		if (isLogged)
 		{
 			PrintDebug(caller, "Already logged in, executing request...");
-			SteamWorks_SetHTTPCallbacks(finalRequest, finalFunction)
+			SteamWorks_SetHTTPCallbacks(finalRequest, finalFunction);
 			SteamWorks_SendHTTPRequest(finalRequest);
 			startTimeoutTimer();
 			return;
@@ -567,21 +576,12 @@ public cbkTokenRequest(Handle:response, bool:failure, bool:requestSuccessful, EH
 public cbkGroupAnnouncement(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
 {
 	stopTimeoutTimer();
-	if (connectionInterrupted)
-	{
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
-		return;
-	}
+	if (connectionInterrupted) return;
 	
 	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
 	{
 		PrintDebug(caller, "Group announcement request failed (%i). Status Code: %i", requestSuccessful, statusCode);
 		onRequestResult(caller, false, 0x10); // Failed http group announcement request
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
 		return;
 	}
 	new cookieSize;
@@ -614,46 +614,27 @@ public cbkGroupAnnouncement(Handle:response, bool:failure, bool:requestSuccessfu
 		isLogged = false;
 		PrintDebug(caller, "Invalid steam login token.");
 		onRequestResult(caller, false, 0x11); // Invalid steam login token
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
 		return;
 	}
 	if (strcmp(title, "Steam Community :: Error") == 0)
 	{
 		PrintDebug(caller, "Form error on request.");
 		onRequestResult(caller, false, 0x12); // Form error on request
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
 		return;
 	}
 	
 	onRequestResult(caller, true);
-	
-	CloseHandle(finalRequest);
-	finalRequest = INVALID_HANDLE;
-	finalFunction = INVALID_FUNCTION;
 }
 
 public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
 {
 	stopTimeoutTimer();
-	if (connectionInterrupted)
-	{
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
-		return;
-	}
+	if (connectionInterrupted) return;
 	
 	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
 	{
 		PrintDebug(caller, "Group invite request failed (%i). Status Code: %i", requestSuccessful, statusCode);
 		onRequestResult(caller, false, 0x20); // Failed http group invite request
-		CloseHandle(finalRequest);
-		finalRequest = INVALID_HANDLE;
-		finalFunction = INVALID_FUNCTION;
 		return;
 	}
 	new bodySize;
@@ -720,10 +701,347 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 		}	
 	}
 	PrintDebug(caller, "Response body (%i):\n %s", strlen(responseBody), responseBody);
+}
+
+public cbkGetProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
+{
+	stopTimeoutTimer();
+	if (connectionInterrupted) return;
+	
+	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+	{
+		PrintDebug(caller, "Membership check request failed (%i). Status Code: %i", requestSuccessful, statusCode);
+		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		return;
+	}
+	
+	new bodySize;
+	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
+	decl String:responseBody[bodySize];
+	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
+	
+	new Handle:regex;
+	regex = CompileRegex("<customURL><!\\[CDATA\\[(.*?)\\]\\]><\\/customURL>", PCRE_DOTALL);
+	MatchRegex(regex, responseBody);
+	decl String:result[128];
+	GetRegexSubString(regex, 1, result, sizeof(result));
+	CloseHandle(regex);
+	regex = INVALID_HANDLE;
 	
 	CloseHandle(finalRequest);
 	finalRequest = INVALID_HANDLE;
-	finalFunction = INVALID_FUNCTION;
+	
+	decl String:URL[128];
+	Format(URL, sizeof URL, "http://steamcommunity.com/id/%s/?xml=1", result);
+	
+	PrintDebug(caller, "Found custom URL: %s", URL);
+	
+	finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
+	//SteamWorks_SetHTTPCallbacks(finalRequest, cbkCheckMembership);
+	SteamWorks_SendHTTPRequest(finalRequest);
+	startTimeoutTimer();
+}
+
+public nativeCheckMembershipFromProfile(Handle:plugin, numParams)
+{
+	decl String:account[64];
+	decl String:groupID[64];
+	new client = GetNativeCell(1);
+	GetNativeString(2, account, sizeof account);
+	GetNativeString(3, groupID, sizeof groupID);
+	
+	strcopy(groupCheck, sizeof groupCheck, groupID);
+	
+	decl String:URL[64];
+	Format(URL, sizeof URL, "http://steamcommunity.com/profiles/%s/?xml=1", account);
+	
+	PrintDebug(client, "Getting: %s", URL);
+	
+	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
+	
+	startRequest(client, _finalRequest, cbkCheckMembershipFromProfile, plugin, Function:GetNativeCell(4));
+}
+
+public cbkCheckMembershipFromProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
+{
+	stopTimeoutTimer();
+	if (connectionInterrupted) return;
+	
+	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+	{
+		PrintDebug(caller, "Membership check request failed (%i). Status Code: %i", requestSuccessful, statusCode);
+		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		return;
+	}
+	
+	new bodySize;
+	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
+	decl String:responseBody[bodySize];
+	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
+	
+	decl String:search[64];
+	Format(search, sizeof search, "<groupID64>%s</groupID64>", groupCheck);
+	
+	if (StrContains(responseBody, groupCheck, false) != -1)
+	{
+		PrintDebug(caller, "Client %s belongs to group %s.", caller, groupCheck);
+		onRequestResult(caller, true, 0, true);
+	}
+	else
+	{
+		PrintDebug(caller, "Client %s does NOT belong to group %s.", caller, groupCheck);
+		onRequestResult(caller, true, 0, false);
+	}
+}
+
+new Handle:checkMembershipFromStorage_Plugin;
+new Function:checkMembershipFromStorage_Function;
+public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
+{
+	decl String:account[64];
+	decl String:groupID[64];
+	new client = GetNativeCell(1);
+	GetNativeString(2, account, sizeof account);
+	GetNativeString(3, groupID, sizeof groupID);
+	
+	checkMembershipFromStorage_Plugin = plugin;
+	checkMembershipFromStorage_Function = Function:GetNativeCell(4);
+	
+	decl String:error[256];
+	new Handle:db = SQL_Connect("steamcore", true, error, sizeof error);
+	if (db == INVALID_HANDLE) 
+	{
+		PrintDebug(client, "Error Connecting to DB: %s", error);
+		onRequestResult(client, false, 0x32); 
+		return;
+	}
+	PrintDebug(client, "Checking if member is in database...");
+	
+	decl String:SELECT[256];
+	Format(SELECT, sizeof SELECT, "SELECT 1 FROM `%s` WHERE member = %s", groupID, account);
+	SQL_TQuery(db, cbkCheckMembershipFromStorage, SELECT, client);
+}
+
+public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const String:error[], any:client)
+{
+	new bool:success;
+	new errorCode;
+	new bool:isMember;
+	if (query == INVALID_HANDLE)
+	{
+		PrintDebug(client, "Error retrieving members from database: %s", error);
+		success = false;
+		errorCode = 0x33;
+		isMember = false;
+	}
+	else
+	{
+		success = true;
+		errorCode = 0;
+		isMember = bool:SQL_GetRowCount(query);
+	}
+	
+	PrintDebug(client, "Member %sfound in database.", isMember?"":"NOT ");
+	
+	// Start function call
+	Call_StartFunction(checkMembershipFromStorage_Plugin, checkMembershipFromStorage_Function);
+	// Push parameters one at a time
+	Call_PushCell(client); // Client
+	Call_PushCell(success); // Success
+	Call_PushCell(errorCode); // Error code
+	Call_PushCell(isMember); // Extra data
+	// Finish the call
+	Call_Finish();
+	
+	CloseHandle(connection);
+	connection = INVALID_HANDLE;
+}
+
+
+public nativeStoreMembersList(Handle:plugin, numParams)
+{
+	decl String:groupID[64];
+	new client = GetNativeCell(1);
+	GetNativeString(2, groupID, sizeof groupID);
+	strcopy(groupCheck, sizeof groupCheck, groupID);
+	
+	decl String:URL[128];
+	Format(URL, sizeof URL, "http://steamcommunity.com/gid/%s/memberslistxml/?xml=1", groupID);
+	
+	PrintDebug(client, "Requesting: %s", URL);
+	
+	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
+	
+	startRequest(client, _finalRequest, cbkStoreMembersList, plugin, Function:GetNativeCell(3));
+}
+
+public cbkStoreMembersList(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
+{
+	stopTimeoutTimer();
+	if (connectionInterrupted) return;
+	
+	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+	{
+		PrintDebug(caller, "Members List request failed (%i). Status Code: %i", requestSuccessful, statusCode);
+		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		return;
+	}
+	
+	new bodySize;
+	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
+	decl String:responseBody[bodySize];
+	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
+	
+	decl String:match[128];
+	new Handle:regex;
+	regex = CompileRegex("<totalPages>(.*?)<\\/totalPages>");
+	MatchRegex(regex, responseBody);
+	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
+	{
+		PrintDebug(caller, "Members List indexing failed. Could not parse 'totalPages' from group XML.");
+		onRequestResult(caller, false, 0x31);
+		return;
+	}
+	new totalPages = StringToInt(match);
+	CloseHandle(regex);
+	regex = CompileRegex("<currentPage>(.*?)<\\/currentPage>");
+	MatchRegex(regex, responseBody);
+	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
+	{
+		PrintDebug(caller, "Members List indexing failed. Could not parse 'currentPage' from group XML.");
+		onRequestResult(caller, false, 0x31);
+		return;
+	}
+	new currentPage = StringToInt(match);
+	CloseHandle(regex);
+	regex = CompileRegex("<memberCount>(.*?)<\\/memberCount>");
+	MatchRegex(regex, responseBody);
+	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
+	{
+		PrintDebug(caller, "Members List indexing failed. Could not parse 'memberCount' from group XML.");
+		onRequestResult(caller, false, 0x31);
+		return;
+	}
+	new memberCount = StringToInt(match);
+	CloseHandle(regex);
+	
+	PrintDebug(caller, "Indexing members: Page %i of %i", currentPage, totalPages);
+	
+	// SQLite allows a max of 500 inertions and group pages display up to 1000 members
+	decl String:INSERT1[12000];
+	decl String:INSERT2[12000];
+	Format(INSERT1, sizeof INSERT1, "INSERT INTO `%s` (`member`) VALUES", groupCheck);
+	Format(INSERT2, sizeof INSERT2, "INSERT INTO `%s` (`member`) VALUES", groupCheck);
+	
+	new a = StrContains(responseBody[0], "<steamID64>");
+	new i = a + 11; // Plus the number of chars of the search
+	new counter = 0;
+	decl String:steamId[32];
+	
+	while (a != -1)
+	{
+		a = StrContains(responseBody[i], "<steamID64>");
+		strcopy(steamId, 18, responseBody[i]);
+		if (counter < 500) 
+		{
+			if (counter == 0) StrCat(INSERT1, sizeof INSERT1, " (");
+			else StrCat(INSERT1, sizeof INSERT1, ", (");
+			StrCat(INSERT1, sizeof INSERT1, steamId);
+			StrCat(INSERT1, sizeof INSERT1, ")");
+		}
+		else
+		{
+			if (counter == 500) StrCat(INSERT2, sizeof INSERT2, " (");
+			else StrCat(INSERT2, sizeof INSERT2, ", (");
+			StrCat(INSERT2, sizeof INSERT2, steamId);
+			StrCat(INSERT2, sizeof INSERT2, ")");
+		}
+		counter++;
+		i += (a + 11);
+	}
+	StrCat(INSERT1, sizeof INSERT1, ";");
+	StrCat(INSERT2, sizeof INSERT2, ";");
+	
+	PrintDebug(caller, "Storing %i members from a total of %i into database...", counter+(currentPage*1000), memberCount);
+	
+	if (counter)
+	{
+		decl String:error[256];
+		dbConnection = SQL_Connect("steamcore", true, error, sizeof error);
+		
+		if (dbConnection == INVALID_HANDLE) 
+		{
+			PrintDebug(caller, "Error Connecting to DB: %s", error);
+			onRequestResult(caller, false, 0x32); 
+			return;
+		}
+		
+		SQL_LockDatabase(dbConnection);
+		if (currentPage == 1)
+		{
+			decl String:TABLE[128];
+			Format(TABLE, sizeof TABLE, "DROP TABLE IF EXISTS `%s`;", groupCheck);
+			if (!SQL_FastQuery(dbConnection, TABLE))
+			{
+				SQL_GetError(dbConnection, error, sizeof error );
+				PrintDebug(caller, "Error dropping table from DB: %s.", error);
+				CloseHandle(dbConnection);
+				dbConnection = INVALID_HANDLE;
+				onRequestResult(caller, false, 0x32); 
+				return;
+			}
+			Format(TABLE, sizeof TABLE, "CREATE TABLE `%s` (`member` bigint);", groupCheck);
+			if (!SQL_FastQuery(dbConnection, TABLE))
+			{
+				SQL_GetError(dbConnection, error, sizeof error );
+				PrintDebug(caller, "Error creating table in DB: %s.", error);
+				CloseHandle(dbConnection);
+				dbConnection = INVALID_HANDLE;
+				onRequestResult(caller, false, 0x32);
+				return;
+			}
+		}
+		if (!SQL_FastQuery(dbConnection, INSERT1))
+		{
+			SQL_GetError(dbConnection, error, sizeof error);
+			PrintDebug(caller, "Error inserting first half of values into DB: %s.", error);
+			CloseHandle(dbConnection);
+			dbConnection = INVALID_HANDLE;
+			onRequestResult(caller, false, 0x32);
+			return;
+		}
+		
+		if (counter >= 500 && !SQL_FastQuery(dbConnection, INSERT2))
+		{
+			SQL_GetError(dbConnection, error, sizeof error);
+			PrintDebug(caller, "Error inserting second half of values into DB: %s.", error);
+			CloseHandle(dbConnection);
+			dbConnection = INVALID_HANDLE;
+			onRequestResult(caller, false, 0x32);
+			return;
+		}
+		SQL_UnlockDatabase(dbConnection);
+		CloseHandle(dbConnection);
+		dbConnection = INVALID_HANDLE;
+		PrintDebug(caller, "Success.");
+		
+		if (totalPages != currentPage)
+		{
+			CloseHandle(finalRequest);
+			finalRequest = INVALID_HANDLE;
+			
+			decl String:URL[128];
+			Format(URL, sizeof URL, "http://steamcommunity.com/gid/%s/memberslistxml/?xml=1&p=%i", groupCheck, currentPage + 1);
+
+			PrintDebug(caller, "Requesting: %s", URL);
+
+			finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
+			SteamWorks_SetHTTPCallbacks(finalRequest, finalFunction);
+			SteamWorks_SendHTTPRequest(finalRequest); // Recursive call
+			return;
+		}
+		onRequestResult(caller, true);
+	}
 }
 
 onRequestResult(client, bool:success, errorCode=0, any:data=0)
@@ -740,7 +1058,7 @@ onRequestResult(client, bool:success, errorCode=0, any:data=0)
 		KillTimer(hTimeIncreaser);
 		hTimeIncreaser = CreateTimer(TIMER_UPDATE_TIME*60.0, timeIncreaser, INVALID_HANDLE, TIMER_REPEAT);
 	}
-	// In case there was an error before the last request was executed, they are freed.
+	// In case there was an error before the last request was executed, those are freed.
 	else if (errorCode > 0 && errorCode <= 0x0A)
 	{
 		if (finalRequest != INVALID_HANDLE) CloseHandle(finalRequest);
@@ -756,7 +1074,7 @@ onRequestResult(client, bool:success, errorCode=0, any:data=0)
 		Call_PushCell(client); // Client
 		Call_PushCell(success); // Success
 		Call_PushCell(errorCode); // Error code
-		Call_PushCell(data); // Extra data, in this case nothing
+		Call_PushCell(data); // Extra data
 		// Finish the call
 		new result = Call_Finish();
 		PrintDebug(caller, "Callback calling error code: %i (0: Success)", result);
@@ -764,6 +1082,9 @@ onRequestResult(client, bool:success, errorCode=0, any:data=0)
 		removeCallback();
 	}
 	caller = 0;
+	CloseHandle(finalRequest);
+	finalRequest = INVALID_HANDLE;
+	finalFunction = INVALID_FUNCTION;
 }
 
 removeCallback()
