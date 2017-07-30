@@ -1,6 +1,7 @@
 #pragma dynamic 4194304 // Increases stack space to 4mb, needed for encryption
 
 #include <sourcemod>
+#include <steamcore>
 #include <regex>
 
 // Core includes
@@ -33,14 +34,17 @@ new const Float:TIMEOUT_TIME = 10.0;
 
 new Handle:cvarUsername;
 new Handle:cvarPassword;
+new Handle:cvarLoginOnMapChange;
 new Handle:cvarDebug;
 
 new String:username[32] = "";
 new String:passphrase[32] = "";
 new String:sessionToken[32] = "";
 new String:sessionCookie[256] = "";
+new String:autoStoreGroup[128] = "";
 new bool:isLogged = false;
 new bool:isBusy = false;
+new bool:autoStore = false;
 new Handle:request;
 
 new caller;
@@ -57,9 +61,8 @@ new Function:callbackFunction;
 new Handle:finalRequest;
 new SteamWorksHTTPRequestCompleted:finalFunction;
 
-// Lazy Globals
+// Lazy Global
 new String:groupCheck[128];
-new Handle:dbConnection;
 
 // ===================================================================================
 // ===================================================================================
@@ -73,6 +76,7 @@ public APLRes:AskPluginLoad2(Handle:plugin, bool:late, String:error[], err_max)
 	CreateNative("SteamGroupCheckMembershipFromProfile", nativeCheckMembershipFromProfile);
 	CreateNative("SteamGroupCheckMembershipFromStorage", nativeCheckMembershipFromStorage);
 	CreateNative("SteamGroupStoreMembersList", nativeStoreMembersList);
+	CreateNative("SteamGroupToggleAutomaticMembersListStoring", nativeToggleAutomaticMembersListStoring);
 	
 	RegPluginLibrary("steamcore");
 	
@@ -91,6 +95,7 @@ public OnPluginStart()
 	CreateConVar("steamcore_version", PLUGIN_VERSION, "SteamCore Version", FCVAR_SPONLY | FCVAR_DONTRECORD | FCVAR_NOTIFY);
 	cvarUsername = CreateConVar("sc_username", "", "Steam login username.", FCVAR_PROTECTED);
 	cvarPassword = CreateConVar("sc_password", "", "Steam login password.", FCVAR_PROTECTED);
+	cvarLoginOnMapChange = CreateConVar("sc_loginonmapchange", "1", "Toggles automatic login on every map change.", 0, true, 0.0, true, 1.0);
 	cvarDebug = CreateConVar("sc_debug", "0", "Toggles debugging.", 0, true, 0.0, true, 1.0);
 	
 	HookConVarChange(cvarUsername, OnLoginInfoChange);
@@ -126,11 +131,20 @@ public Action:timeIncreaser(Handle:timer)
 public OnConfigsExecuted()
 {
 	DEBUG = GetConVarBool(FindConVar("sc_debug"));
-	if (timeSinceLastLogin > 10)
+	if (timeSinceLastLogin > 10 && (GetConVarBool(cvarLoginOnMapChange) || autoStore))
 	{
 		PrintDebug(0, "\n============================================================================\n");
-		PrintDebug(0, "Logging in to keep login alive...");
-		startRequest(0, INVALID_HANDLE, INVALID_FUNCTION, INVALID_HANDLE, INVALID_FUNCTION); // Starts an empty login request
+		
+		if (autoStore)
+		{
+			PrintDebug(0, "Logging and storing members list...");
+			SteamGroupStoreMembersList(0, autoStoreGroup, INVALID_FUNCTION);
+		}
+		else
+		{
+			PrintDebug(0, "Logging in to keep login alive...");
+			startRequest(0, INVALID_HANDLE, INVALID_FUNCTION, INVALID_HANDLE, INVALID_FUNCTION); // Starts an empty login request
+		}
 	}
 }
 
@@ -780,6 +794,7 @@ public cbkCheckMembershipFromProfile(Handle:response, bool:failure, bool:request
 
 new Handle:checkMembershipFromStorage_Plugin;
 new Function:checkMembershipFromStorage_Function;
+new bool:checkMembershipFromStorage_busy;
 public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
 {
 	decl String:account[64];
@@ -804,6 +819,8 @@ public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
 	decl String:SELECT[256];
 	Format(SELECT, sizeof SELECT, "SELECT 1 FROM `%s` WHERE member = %s", groupID, account);
 	SQL_TQuery(db, cbkCheckMembershipFromStorage, SELECT, client);
+	
+	checkMembershipFromStorage_busy = true;
 }
 
 public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const String:error[], any:client)
@@ -824,7 +841,6 @@ public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const Stri
 		errorCode = 0;
 		isMember = bool:SQL_GetRowCount(query);
 	}
-	
 	PrintDebug(client, "Member %sfound in database.", isMember?"":"NOT ");
 	
 	if (checkMembershipFromStorage_Plugin != INVALID_HANDLE && checkMembershipFromStorage_Function != INVALID_FUNCTION)
@@ -839,11 +855,12 @@ public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const Stri
 		// Finish the call
 		Call_Finish();
 	}
-	
 	CloseHandle(connection);
 	connection = INVALID_HANDLE;
 	checkMembershipFromStorage_Plugin = INVALID_HANDLE;
 	checkMembershipFromStorage_Function = INVALID_FUNCTION;
+	
+	checkMembershipFromStorage_busy = false;
 }
 
 
@@ -956,7 +973,7 @@ public cbkStoreMembersList(Handle:response, bool:failure, bool:requestSuccessful
 	if (counter)
 	{
 		decl String:error[256];
-		dbConnection = SQL_Connect("steamcore", true, error, sizeof error);
+		new Handle:dbConnection = SQL_Connect("steamcore", true, error, sizeof error);
 		
 		if (dbConnection == INVALID_HANDLE) 
 		{
@@ -1031,6 +1048,15 @@ public cbkStoreMembersList(Handle:response, bool:failure, bool:requestSuccessful
 		}
 		onRequestResult(caller, true);
 	}
+}
+
+public nativeToggleAutomaticMembersListStoring(Handle:plugin, numParams)
+{
+	new client = GetNativeCell(1);
+	GetNativeString(2, autoStoreGroup, sizeof autoStoreGroup);
+	autoStore = bool:GetNativeCell(3);
+	
+	PrintDebug(client, "Toggling automatic storing of group '%s' to state: %i", autoStoreGroup, autoStore);
 }
 
 onRequestResult(client, bool:success, errorCode=0, any:data=0)

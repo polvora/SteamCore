@@ -121,6 +121,18 @@ native SteamGroupCheckMembershipFromStorage(client, const String:account[], cons
  */
 native SteamGroupStoreMembersList(client, const String:group[], SteamCoreCallback:func);
 
+
+/**
+ * Calls SteamGroupStoreMembersList() on map change only if more than 10 minutes have passed from the last map change.
+ * Only 1 group tracking is allowed, if called again with other group, it will only keep track of the last one.
+ * 
+ * @param group		SteamID64 of the group.
+ * @param autostore	If set true, the plugin will automatically store the members list on every map change.
+ *
+ * @noreturn
+ */
+native SteamGroupToggleAutomaticMembersListStoring(client, const String:group[], bool:autostore);
+
 public SharedPlugin:__pl_steamcore = 
 {
 	name = "steamcore",
