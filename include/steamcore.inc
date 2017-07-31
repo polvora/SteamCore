@@ -67,7 +67,7 @@ native bool:IsSteamCoreBusy();
  * 
  * @noreturn
  */
-native SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
+native bool:SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
 
 /**
  * Sends a Steam group invitation to an account.
@@ -79,7 +79,7 @@ native SteamGroupAnnouncement(client, const String:title[], const String:body[],
  *
  * @noreturn
  */
-native SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
+native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
 
 /**
  * Reads an account profile and checks if it is member of the group.
@@ -93,7 +93,7 @@ native SteamGroupInvite(client, const String:invitee[], const String:group[], St
  *
  * @noreturn
  */
-native SteamGroupCheckMembershipFromProfile(client, const String:account[], const String:group[], SteamCoreCallback:func);
+native bool:SteamGroupCheckMembershipFromProfile(client, const String:account[], const String:group[], SteamCoreCallback:func);
 
 /**
  * Checks if member is present in the list stored by SteamGroupStoreMembersList().
@@ -105,7 +105,7 @@ native SteamGroupCheckMembershipFromProfile(client, const String:account[], cons
  *
  * @noreturn
  */
-native SteamGroupCheckMembershipFromStorage(client, const String:account[], const String:group[], SteamCoreCallback:func);
+native bool:SteamGroupCheckMembershipFromStorage(client, const String:account[], const String:group[], SteamCoreCallback:func);
 
 /**
  * Reads a group members list and writes every member id to a DB.
@@ -119,7 +119,7 @@ native SteamGroupCheckMembershipFromStorage(client, const String:account[], cons
  * 
  * @noreturn
  */
-native SteamGroupStoreMembersList(client, const String:group[], SteamCoreCallback:func);
+native bool:SteamGroupStoreMembersList(client, const String:group[], SteamCoreCallback:func);
 
 
 /**

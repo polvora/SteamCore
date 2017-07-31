@@ -184,7 +184,7 @@ public nativeGroupAnnouncement(Handle:plugin, numParams)
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "languages[0][headline]", title);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "languages[0][body]", body);
 	
-	startRequest(client, _finalRequest, cbkGroupAnnouncement, plugin, Function:GetNativeCell(5));
+	return _:startRequest(client, _finalRequest, cbkGroupAnnouncement, plugin, Function:GetNativeCell(5));
 }
 
 public nativeGroupInvite(Handle:plugin, numParams)
@@ -216,31 +216,20 @@ public nativeGroupInvite(Handle:plugin, numParams)
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "group", groupID);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "invitee", invitee);
 	
-	startRequest(client, _finalRequest, cbkGroupInvite, plugin, Function:GetNativeCell(4));
+	return _:startRequest(client, _finalRequest, cbkGroupInvite, plugin, Function:GetNativeCell(4));
 }
 
-
-
 // ===================================================================================
 // ===================================================================================
 
-new Handle:busy_Plugin;
-new Function:busy_Function;
-startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_finalFunction, Handle:_callbackPlugin, Function:_callbackFunction)
+bool:startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_finalFunction, Handle:_callbackPlugin, Function:_callbackFunction)
 {		
 	if (isBusy)
 	{
 		PrintDebug(client, "\n============================================================================\n");
 		PrintDebug(client, "Plugin is busy with other task at this time, rejecting request...");
-		
-		if (_callbackFunction != INVALID_FUNCTION) // There is an actual function callback
-		{
-			busy_Plugin = _callbackPlugin;
-			busy_Function = _callbackFunction;
-			CreateTimer(0.1, tmrBusyCallback, client);
-			CloseHandle(_finalRequest);
-		}
-		return;
+		if (_finalRequest != INVALID_HANDLE) CloseHandle(_finalRequest);
+		return false;
 	}
 	isBusy = true;
 	connectionInterrupted = false;
@@ -263,7 +252,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 			SteamWorks_SetHTTPCallbacks(finalRequest, finalFunction);
 			SteamWorks_SendHTTPRequest(finalRequest);
 			startTimeoutTimer();
-			return;
+			return true;
 		}
 	}
 	GetConVarString(cvarUsername, username, sizeof(username));
@@ -273,7 +262,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 	{
 		PrintDebug(caller, "Invalid login information, check cvars. ABORTED.");
 		onRequestResult(caller, false, 0x03); // Invalid login information
-		return;
+		return true;
 	}
 	
 	request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, "http://steamcommunity.com/login/getrsakey/");
@@ -283,6 +272,7 @@ startRequest(client, Handle:_finalRequest, SteamWorksHTTPRequestCompleted:_final
 	startTimeoutTimer();
 	
 	PrintDebug(caller, "Obtaining RSA Key from steamcommunity.com/login/getrsakey...");
+	return true;
 }
 
 startTimeoutTimer()
@@ -306,33 +296,6 @@ public Action:tmrTimeout(Handle:timer)
 	connectionInterrupted = true;
 	onRequestResult(caller, false, 0x02);
 	timeoutTimer = INVALID_HANDLE;
-}
-
-public Action:tmrBusyCallback(Handle:timer, any:client)
-{
-	PrintDebug(client, "Calling busy callback...");
-	
-	if (busy_Plugin != INVALID_HANDLE && busy_Function != INVALID_FUNCTION)
-	{
-		// Start function call
-		Call_StartFunction(busy_Plugin, busy_Function);
-		// Push parameters one at a time
-		Call_PushCell(client);
-		Call_PushCell(false);
-		Call_PushCell(0x01); // Plugin is busy
-		Call_PushCell(0);
-		// Finish the call
-		new result = Call_Finish();
-		PrintDebug(client, "Callback call result: %i (0: success)", result);
-	}
-	else
-	{
-		PrintDebug(client, "Plugin unloaded. Callback failed.");
-	}
-	
-	busy_Plugin = INVALID_HANDLE;
-	busy_Function = INVALID_FUNCTION;
-	PrintDebug(client, "Task rejected.");
 }
 
 public cbkRsaKeyRequest(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
@@ -757,7 +720,7 @@ public nativeCheckMembershipFromProfile(Handle:plugin, numParams)
 	
 	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
 	
-	startRequest(client, _finalRequest, cbkCheckMembershipFromProfile, plugin, Function:GetNativeCell(4));
+	return _:startRequest(client, _finalRequest, cbkCheckMembershipFromProfile, plugin, Function:GetNativeCell(4));
 }
 
 public cbkCheckMembershipFromProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
@@ -803,16 +766,22 @@ public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
 	GetNativeString(2, account, sizeof account);
 	GetNativeString(3, groupID, sizeof groupID);
 	
+	if (checkMembershipFromStorage_busy)
+	{
+		plugin = INVALID_HANDLE;
+		return _:false;
+	}
+	
 	checkMembershipFromStorage_Plugin = plugin;
 	checkMembershipFromStorage_Function = Function:GetNativeCell(4);
 	
 	decl String:error[256];
 	new Handle:db = SQL_Connect("steamcore", true, error, sizeof error);
-	if (db == INVALID_HANDLE) 
+	if (db == INVALID_HANDLE)
 	{
 		PrintDebug(client, "Error Connecting to DB: %s", error);
 		onRequestResult(client, false, 0x32); 
-		return;
+		return _:true;
 	}
 	PrintDebug(client, "Checking if member is in database...");
 	
@@ -821,10 +790,13 @@ public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
 	SQL_TQuery(db, cbkCheckMembershipFromStorage, SELECT, client);
 	
 	checkMembershipFromStorage_busy = true;
+	return _:true;
 }
 
 public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const String:error[], any:client)
 {
+	checkMembershipFromStorage_busy = false;
+	
 	new bool:success;
 	new errorCode;
 	new bool:isMember;
@@ -857,12 +829,11 @@ public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const Stri
 	}
 	CloseHandle(connection);
 	connection = INVALID_HANDLE;
+	CloseHandle(query);
+	query = INVALID_HANDLE;
 	checkMembershipFromStorage_Plugin = INVALID_HANDLE;
 	checkMembershipFromStorage_Function = INVALID_FUNCTION;
-	
-	checkMembershipFromStorage_busy = false;
 }
-
 
 public nativeStoreMembersList(Handle:plugin, numParams)
 {
@@ -878,7 +849,7 @@ public nativeStoreMembersList(Handle:plugin, numParams)
 	
 	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
 	
-	startRequest(client, _finalRequest, cbkStoreMembersList, plugin, Function:GetNativeCell(3));
+	return _:startRequest(client, _finalRequest, cbkStoreMembersList, plugin, Function:GetNativeCell(3));
 }
 
 public cbkStoreMembersList(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
