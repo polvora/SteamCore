@@ -41,10 +41,8 @@ new String:username[32] = "";
 new String:passphrase[32] = "";
 new String:sessionToken[32] = "";
 new String:sessionCookie[256] = "";
-new String:autoStoreGroup[128] = "";
 new bool:isLogged = false;
 new bool:isBusy = false;
-new bool:autoStore = false;
 new Handle:request;
 
 new caller;
@@ -61,9 +59,6 @@ new Function:callbackFunction;
 new Handle:finalRequest;
 new SteamWorksHTTPRequestCompleted:finalFunction;
 
-// Lazy Global
-new String:groupCheck[128];
-
 // ===================================================================================
 // ===================================================================================
 
@@ -73,10 +68,6 @@ public APLRes:AskPluginLoad2(Handle:plugin, bool:late, String:error[], err_max)
 	CreateNative("IsSteamCoreBusy", nativeIsSteamCoreBusy);
 	CreateNative("SteamGroupAnnouncement", nativeGroupAnnouncement);
 	CreateNative("SteamGroupInvite", nativeGroupInvite);
-	CreateNative("SteamGroupCheckMembershipFromProfile", nativeCheckMembershipFromProfile);
-	CreateNative("SteamGroupCheckMembershipFromStorage", nativeCheckMembershipFromStorage);
-	CreateNative("SteamGroupStoreMembersList", nativeStoreMembersList);
-	CreateNative("SteamGroupToggleAutomaticMembersListStoring", nativeToggleAutomaticMembersListStoring);
 	
 	RegPluginLibrary("steamcore");
 	
@@ -131,20 +122,11 @@ public Action:timeIncreaser(Handle:timer)
 public OnConfigsExecuted()
 {
 	DEBUG = GetConVarBool(FindConVar("sc_debug"));
-	if (timeSinceLastLogin > 10 && (GetConVarBool(cvarLoginOnMapChange) || autoStore))
+	if (timeSinceLastLogin > 10 && GetConVarBool(cvarLoginOnMapChange))
 	{
 		PrintDebug(0, "\n============================================================================\n");
-		
-		if (autoStore)
-		{
-			PrintDebug(0, "Logging and storing members list...");
-			SteamGroupStoreMembersList(0, autoStoreGroup, INVALID_FUNCTION);
-		}
-		else
-		{
-			PrintDebug(0, "Logging in to keep login alive...");
-			startRequest(0, INVALID_HANDLE, INVALID_FUNCTION, INVALID_HANDLE, INVALID_FUNCTION); // Starts an empty login request
-		}
+		PrintDebug(0, "Logging in to keep login alive...");
+		startRequest(0, INVALID_HANDLE, INVALID_FUNCTION, INVALID_HANDLE, INVALID_FUNCTION); // Starts an empty login request
 	}
 }
 
@@ -701,333 +683,6 @@ public cbkGetProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTT
 	//SteamWorks_SetHTTPCallbacks(finalRequest, cbkCheckMembership);
 	SteamWorks_SendHTTPRequest(finalRequest);
 	startTimeoutTimer();
-}
-
-public nativeCheckMembershipFromProfile(Handle:plugin, numParams)
-{
-	decl String:account[64];
-	decl String:groupID[64];
-	new client = GetNativeCell(1);
-	GetNativeString(2, account, sizeof account);
-	GetNativeString(3, groupID, sizeof groupID);
-	
-	strcopy(groupCheck, sizeof groupCheck, groupID);
-	
-	decl String:URL[64];
-	Format(URL, sizeof URL, "http://steamcommunity.com/profiles/%s/?xml=1", account);
-	
-	PrintDebug(client, "Getting: %s", URL);
-	
-	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
-	
-	return _:startRequest(client, _finalRequest, cbkCheckMembershipFromProfile, plugin, Function:GetNativeCell(4));
-}
-
-public cbkCheckMembershipFromProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
-{
-	stopTimeoutTimer();
-	if (connectionInterrupted) return;
-	
-	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
-	{
-		PrintDebug(caller, "Membership check request failed (%i). Status Code: %i", requestSuccessful, statusCode);
-		onRequestResult(caller, false, 0x30); // Failed http group invite request
-		return;
-	}
-	
-	new bodySize;
-	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
-	decl String:responseBody[bodySize];
-	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
-	
-	decl String:search[64];
-	Format(search, sizeof search, "<groupID64>%s</groupID64>", groupCheck);
-	
-	if (StrContains(responseBody, groupCheck, false) != -1)
-	{
-		PrintDebug(caller, "Client %s belongs to group %s.", caller, groupCheck);
-		onRequestResult(caller, true, 0, true);
-	}
-	else
-	{
-		PrintDebug(caller, "Client %s does NOT belong to group %s.", caller, groupCheck);
-		onRequestResult(caller, true, 0, false);
-	}
-}
-
-new Handle:checkMembershipFromStorage_Plugin;
-new Function:checkMembershipFromStorage_Function;
-new bool:checkMembershipFromStorage_busy;
-public nativeCheckMembershipFromStorage(Handle:plugin, numParams)
-{
-	decl String:account[64];
-	decl String:groupID[64];
-	new client = GetNativeCell(1);
-	GetNativeString(2, account, sizeof account);
-	GetNativeString(3, groupID, sizeof groupID);
-	
-	if (checkMembershipFromStorage_busy)
-	{
-		plugin = INVALID_HANDLE;
-		return _:false;
-	}
-	
-	checkMembershipFromStorage_Plugin = plugin;
-	checkMembershipFromStorage_Function = Function:GetNativeCell(4);
-	
-	decl String:error[256];
-	new Handle:db = SQL_Connect("steamcore", true, error, sizeof error);
-	if (db == INVALID_HANDLE)
-	{
-		PrintDebug(client, "Error Connecting to DB: %s", error);
-		onRequestResult(client, false, 0x32); 
-		return _:true;
-	}
-	PrintDebug(client, "Checking if member is in database...");
-	
-	decl String:SELECT[256];
-	Format(SELECT, sizeof SELECT, "SELECT 1 FROM `%s` WHERE member = %s", groupID, account);
-	SQL_TQuery(db, cbkCheckMembershipFromStorage, SELECT, client);
-	
-	checkMembershipFromStorage_busy = true;
-	return _:true;
-}
-
-public cbkCheckMembershipFromStorage(Handle:connection, Handle:query, const String:error[], any:client)
-{
-	checkMembershipFromStorage_busy = false;
-	
-	new bool:success;
-	new errorCode;
-	new bool:isMember;
-	if (query == INVALID_HANDLE)
-	{
-		PrintDebug(client, "Error retrieving members from database: %s", error);
-		success = false;
-		errorCode = 0x33;
-		isMember = false;
-	}
-	else
-	{
-		success = true;
-		errorCode = 0;
-		isMember = bool:SQL_GetRowCount(query);
-	}
-	PrintDebug(client, "Member %sfound in database.", isMember?"":"NOT ");
-	
-	if (checkMembershipFromStorage_Plugin != INVALID_HANDLE && checkMembershipFromStorage_Function != INVALID_FUNCTION)
-	{
-		// Start function call
-		Call_StartFunction(checkMembershipFromStorage_Plugin, checkMembershipFromStorage_Function);
-		// Push parameters one at a time
-		Call_PushCell(client); // Client
-		Call_PushCell(success); // Success
-		Call_PushCell(errorCode); // Error code
-		Call_PushCell(isMember); // Extra data
-		// Finish the call
-		Call_Finish();
-	}
-	CloseHandle(connection);
-	connection = INVALID_HANDLE;
-	CloseHandle(query);
-	query = INVALID_HANDLE;
-	checkMembershipFromStorage_Plugin = INVALID_HANDLE;
-	checkMembershipFromStorage_Function = INVALID_FUNCTION;
-}
-
-public nativeStoreMembersList(Handle:plugin, numParams)
-{
-	decl String:groupID[64];
-	new client = GetNativeCell(1);
-	GetNativeString(2, groupID, sizeof groupID);
-	strcopy(groupCheck, sizeof groupCheck, groupID);
-	
-	decl String:URL[128];
-	Format(URL, sizeof URL, "http://steamcommunity.com/gid/%s/memberslistxml/?xml=1", groupID);
-	
-	PrintDebug(client, "Requesting: %s", URL);
-	
-	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
-	
-	return _:startRequest(client, _finalRequest, cbkStoreMembersList, plugin, Function:GetNativeCell(3));
-}
-
-public cbkStoreMembersList(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
-{
-	stopTimeoutTimer();
-	if (connectionInterrupted) return;
-	
-	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
-	{
-		PrintDebug(caller, "Members List request failed (%i). Status Code: %i", requestSuccessful, statusCode);
-		onRequestResult(caller, false, 0x30); // Failed http group invite request
-		return;
-	}
-	
-	new bodySize;
-	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
-	decl String:responseBody[bodySize];
-	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
-	
-	decl String:match[128];
-	new Handle:regex;
-	regex = CompileRegex("<totalPages>(.*?)<\\/totalPages>");
-	MatchRegex(regex, responseBody);
-	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
-	{
-		PrintDebug(caller, "Members List indexing failed. Could not parse 'totalPages' from group XML.");
-		onRequestResult(caller, false, 0x31);
-		return;
-	}
-	new totalPages = StringToInt(match);
-	CloseHandle(regex);
-	regex = CompileRegex("<currentPage>(.*?)<\\/currentPage>");
-	MatchRegex(regex, responseBody);
-	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
-	{
-		PrintDebug(caller, "Members List indexing failed. Could not parse 'currentPage' from group XML.");
-		onRequestResult(caller, false, 0x31);
-		return;
-	}
-	new currentPage = StringToInt(match);
-	CloseHandle(regex);
-	regex = CompileRegex("<memberCount>(.*?)<\\/memberCount>");
-	MatchRegex(regex, responseBody);
-	if (!GetRegexSubString(regex, 1, match, sizeof(match)))
-	{
-		PrintDebug(caller, "Members List indexing failed. Could not parse 'memberCount' from group XML.");
-		onRequestResult(caller, false, 0x31);
-		return;
-	}
-	new memberCount = StringToInt(match);
-	CloseHandle(regex);
-	
-	PrintDebug(caller, "Indexing members: Page %i of %i", currentPage, totalPages);
-	
-	// SQLite allows a max of 500 inertions and group pages display up to 1000 members
-	decl String:INSERT1[12000];
-	decl String:INSERT2[12000];
-	Format(INSERT1, sizeof INSERT1, "INSERT INTO `%s` (`member`) VALUES", groupCheck);
-	Format(INSERT2, sizeof INSERT2, "INSERT INTO `%s` (`member`) VALUES", groupCheck);
-	
-	new a = StrContains(responseBody[0], "<steamID64>");
-	new i = a + 11; // Plus the number of chars of the search
-	new counter = 0;
-	decl String:steamId[32];
-	
-	while (a != -1)
-	{
-		a = StrContains(responseBody[i], "<steamID64>");
-		strcopy(steamId, 18, responseBody[i]);
-		if (counter < 500) 
-		{
-			if (counter == 0) StrCat(INSERT1, sizeof INSERT1, " (");
-			else StrCat(INSERT1, sizeof INSERT1, ", (");
-			StrCat(INSERT1, sizeof INSERT1, steamId);
-			StrCat(INSERT1, sizeof INSERT1, ")");
-		}
-		else
-		{
-			if (counter == 500) StrCat(INSERT2, sizeof INSERT2, " (");
-			else StrCat(INSERT2, sizeof INSERT2, ", (");
-			StrCat(INSERT2, sizeof INSERT2, steamId);
-			StrCat(INSERT2, sizeof INSERT2, ")");
-		}
-		counter++;
-		i += (a + 11);
-	}
-	StrCat(INSERT1, sizeof INSERT1, ";");
-	StrCat(INSERT2, sizeof INSERT2, ";");
-	
-	PrintDebug(caller, "Storing %i members from a total of %i into database...", counter+(currentPage*1000), memberCount);
-	
-	if (counter)
-	{
-		decl String:error[256];
-		new Handle:dbConnection = SQL_Connect("steamcore", true, error, sizeof error);
-		
-		if (dbConnection == INVALID_HANDLE) 
-		{
-			PrintDebug(caller, "Error Connecting to DB: %s", error);
-			onRequestResult(caller, false, 0x32); 
-			return;
-		}
-		
-		SQL_LockDatabase(dbConnection);
-		if (currentPage == 1)
-		{
-			decl String:TABLE[128];
-			Format(TABLE, sizeof TABLE, "DROP TABLE IF EXISTS `%s`;", groupCheck);
-			if (!SQL_FastQuery(dbConnection, TABLE))
-			{
-				SQL_GetError(dbConnection, error, sizeof error );
-				PrintDebug(caller, "Error dropping table from DB: %s.", error);
-				CloseHandle(dbConnection);
-				dbConnection = INVALID_HANDLE;
-				onRequestResult(caller, false, 0x32); 
-				return;
-			}
-			Format(TABLE, sizeof TABLE, "CREATE TABLE `%s` (`member` bigint);", groupCheck);
-			if (!SQL_FastQuery(dbConnection, TABLE))
-			{
-				SQL_GetError(dbConnection, error, sizeof error );
-				PrintDebug(caller, "Error creating table in DB: %s.", error);
-				CloseHandle(dbConnection);
-				dbConnection = INVALID_HANDLE;
-				onRequestResult(caller, false, 0x32);
-				return;
-			}
-		}
-		if (!SQL_FastQuery(dbConnection, INSERT1))
-		{
-			SQL_GetError(dbConnection, error, sizeof error);
-			PrintDebug(caller, "Error inserting first half of values into DB: %s.", error);
-			CloseHandle(dbConnection);
-			dbConnection = INVALID_HANDLE;
-			onRequestResult(caller, false, 0x32);
-			return;
-		}
-		
-		if (counter >= 500 && !SQL_FastQuery(dbConnection, INSERT2))
-		{
-			SQL_GetError(dbConnection, error, sizeof error);
-			PrintDebug(caller, "Error inserting second half of values into DB: %s.", error);
-			CloseHandle(dbConnection);
-			dbConnection = INVALID_HANDLE;
-			onRequestResult(caller, false, 0x32);
-			return;
-		}
-		SQL_UnlockDatabase(dbConnection);
-		CloseHandle(dbConnection);
-		dbConnection = INVALID_HANDLE;
-		PrintDebug(caller, "Success.");
-		
-		if (totalPages != currentPage)
-		{
-			CloseHandle(finalRequest);
-			finalRequest = INVALID_HANDLE;
-			
-			decl String:URL[128];
-			Format(URL, sizeof URL, "http://steamcommunity.com/gid/%s/memberslistxml/?xml=1&p=%i", groupCheck, currentPage + 1);
-
-			PrintDebug(caller, "Requesting: %s", URL);
-
-			finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, URL);
-			SteamWorks_SetHTTPCallbacks(finalRequest, finalFunction);
-			SteamWorks_SendHTTPRequest(finalRequest); // Recursive call
-			return;
-		}
-		onRequestResult(caller, true);
-	}
-}
-
-public nativeToggleAutomaticMembersListStoring(Handle:plugin, numParams)
-{
-	new client = GetNativeCell(1);
-	GetNativeString(2, autoStoreGroup, sizeof autoStoreGroup);
-	autoStore = bool:GetNativeCell(3);
-	
-	PrintDebug(client, "Toggling automatic storing of group '%s' to state: %i", autoStoreGroup, autoStore);
 }
 
 onRequestResult(client, bool:success, errorCode=0, any:data=0)

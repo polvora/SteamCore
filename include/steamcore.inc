@@ -6,7 +6,7 @@
 /*
 	Error Codes:
 	0x00: No error, request successful.
-	0x01: Plugin is busy with another task at this time.
+	0x01: Plugin is busy with another task at this time. (legacy, new versions return inmediatly when busy)
 	0x02: Connection timed out.
 	
 	0x03: Login Error: Invalid login information, it means there are errors in the Cvar Strings.
@@ -30,11 +30,6 @@
 	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
 	0x26: Invite Error: Unknown error.
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
-	
-	0x30: Membership Error: Failed http group invite request.
-	0x31: Membership Error: XML parsing error.
-	0x32: Membership Error: Database connection error.
-	0x33: Membership Error: Unable to find the group in database or invalid groupID/accountID
 */
 
 /**
@@ -65,7 +60,7 @@ native bool:IsSteamCoreBusy();
  * @param group		SteamID64 of the group.
  * @param func		Callback function to be called at the end of the request.
  * 
- * @noreturn
+ * @return			True if it was was executed, false if plugin was busy.
  */
 native bool:SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
 
@@ -77,61 +72,9 @@ native bool:SteamGroupAnnouncement(client, const String:title[], const String:bo
  * @param group		GroupID.
  * @param func		Callback function to be called at the end of the request.
  *
- * @noreturn
+ * @return			True if it was was executed, false if plugin was busy.
  */
 native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
-
-/**
- * Reads an account profile and checks if it is member of the group.
- * Changes in the profile CAN be delayed for more than 30 minutes.
- * This is a simpler but more CPU intensive alternative for SteamGroupCheckMembershipFromIndex().
- *
- * @param client 	Reference client, will be returned in callback.
- * @param account	SteamID64 of the account to check.
- * @param group		SteamID64 of the group.
- * @param func		Callback function to be called at the end of the request.
- *
- * @noreturn
- */
-native bool:SteamGroupCheckMembershipFromProfile(client, const String:account[], const String:group[], SteamCoreCallback:func);
-
-/**
- * Checks if member is present in the list stored by SteamGroupStoreMembersList().
- * 
- * @param client 	Reference client, will be returned in callback.
- * @param account	SteamID64 of the account to check.
- * @param group		SteamID64 of the group.
- * @param func		Callback function to be called at the end of the request.
- *
- * @noreturn
- */
-native bool:SteamGroupCheckMembershipFromStorage(client, const String:account[], const String:group[], SteamCoreCallback:func);
-
-/**
- * Reads a group members list and writes every member id to a DB.
- * A databse config with the name "steamcore" must be present in databases.cfg.
- * Changes in the profile CAN be delayed for more than 30 minutes.
- * CPU intensive task.
- * 
- * @param client 	Reference client, will be returned in callback.
- * @param group		SteamID64 of the group.
- * @param func		Callback function to be called at the end of the request.
- * 
- * @noreturn
- */
-native bool:SteamGroupStoreMembersList(client, const String:group[], SteamCoreCallback:func);
-
-
-/**
- * Calls SteamGroupStoreMembersList() on map change only if more than 10 minutes have passed from the last map change.
- * Only 1 group tracking is allowed, if called again with other group, it will only keep track of the last one.
- * 
- * @param group		SteamID64 of the group.
- * @param autostore	If set true, the plugin will automatically store the members list on every map change.
- *
- * @noreturn
- */
-native SteamGroupToggleAutomaticMembersListStoring(client, const String:group[], bool:autostore);
 
 public SharedPlugin:__pl_steamcore = 
 {
