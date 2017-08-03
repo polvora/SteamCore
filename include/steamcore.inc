@@ -28,7 +28,7 @@
 	0x23: Invite Error: Logged out. Retry to login.
 	0x24: Invite Error: Inviter account is not a member of the group or does not have permissions to invite.
 	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
-	0x26: Invite Error: Unknown error.
+	0x26: Invite Error: Probably same as 0x25.
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
 */
 
@@ -57,10 +57,10 @@ native bool:IsSteamCoreBusy();
  * @param client 	Reference client, will be returned in callback.
  * @param title		Title of the announce.
  * @param body		Body of the announce.
- * @param group		SteamID64 of the group.
+ * @param group		GroupID64 of the group.
  * @param func		Callback function to be called at the end of the request.
  * 
- * @return			True if it was was executed, false if plugin was busy.
+ * @return			True if executed, false if plugin is busy.
  */
 native bool:SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
 
@@ -69,10 +69,10 @@ native bool:SteamGroupAnnouncement(client, const String:title[], const String:bo
  *
  * @param client 	Reference client, will be returned in callback.
  * @param invitee	SteamID64 of the account to invite.
- * @param group		GroupID.
+ * @param group		GroupID64 of the group.
  * @param func		Callback function to be called at the end of the request.
  *
- * @return			True if it was was executed, false if plugin was busy.
+ * @return			True if executed, false if plugin is busy.
  */
 native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
 

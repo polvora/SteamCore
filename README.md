@@ -7,19 +7,19 @@ Sourcemod natives that extends the functionality of Pawn to interact with common
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
 
 #### Table of Contents 
-* [Server Owners](#markdown-header-for-server-owners)
-	* [Cvars](#markdown-header-cvars)
-		* [Mandatory](#markdown-header-mandatory)
-		* [Alternative](#markdown-header-alternative)
-	* [Install](#markdown-header-install)
-		* [Requirements](#markdown-header-requirements)
-	* [Download](#markdown-header-download)
-* [Script Writers](#markdown-header-for-scripts-writers)
-	* [Natives](#markdown-header-natives)
-	* [Error Codes](#markdown-header-error-codes)
-	* [Internal Processing of a Request](#markdown-header-internal-processing-of-a-request)
-	* [Demo Code](#markdown-header-demo-code)
-* [Changelog](#markdown-header-changelog)
+* [Server Owners](#for-server-owners)
+	* [Cvars](#cvars)
+		* [Mandatory](#mandatory)
+		* [Alternative](#alternative)
+	* [Install](#install)
+		* [Requirements](#requirements)
+	* [Download](#download)
+* [Script Writers](#for-scripts-writers)
+	* [Natives](#natives)
+	* [Error Codes](#error-codes)
+	* [Internal Processing of a Request](#internal-processing-of-a-request)
+	* [Demo Code](#demo-code)
+* [Changelog](#changelog)
 
 ## For Server Owners
 SteamCore makes use of an account to send requests to Steam server as a normal user would do. Create a new Steam account, **login on a Steam client and deactivate Steam Guard**. 
@@ -59,7 +59,7 @@ Also available on `steamcore.inc`.
 	/**
 	 * Callback function called at the end of a request
 	 * 
-	 * @param client 	Calling client.
+	 * @param client 	Reference client.
 	 * @param success	Result of the request.
 	 * @param errorCode Result error code if error, otherwise 0.
 	 * @param data		Extra data if any, otherwise 0
@@ -67,44 +67,44 @@ Also available on `steamcore.inc`.
 	 * @noreturn
 	 */
 	functag SteamCoreCallback public(client, bool:success, errorCode, any:data);
-	
+
 	/**
 	 * Returns wheter the plugin is currently busy with a request.
 	 *
 	 * @return			True is plugin is busy, false otherwise.
 	*/
 	native bool:IsSteamCoreBusy();
-	
+
 	/**
 	 * Posts an announcement on a desired Steam group. 
 	 *
-	 * @param client 	Debug purposes, calling client, use 0 if no client.
+	 * @param client 	Reference client, will be returned in callback.
 	 * @param title		Title of the announce.
 	 * @param body		Body of the announce.
-	 * @param group		GroupID.
+	 * @param group		GroupID64 of the group.
 	 * @param func		Callback function to be called at the end of the request.
 	 * 
-	 * @noreturn
+	 * @return			True if executed, false if plugin is busy.
 	 */
-	native SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
-	
+	native bool:SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
+
 	/**
 	 * Sends a Steam group invitation to an account.
 	 *
-	 * @param client 	Debug purposes, calling client, use 0 if no client.
+	 * @param client 	Reference client, will be returned in callback.
 	 * @param invitee	SteamID64 of the account to invite.
-	 * @param group		GroupID.
+	 * @param group		GroupID64 of the group.
 	 * @param func		Callback function to be called at the end of the request.
 	 *
-	 * @noreturn
+	 * @return			True if executed, false if plugin is busy.
 	 */
-	native SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
+	native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
 
 ### Error Codes
 Also available on `steamcore.inc`.
 
 	0x00: No error, request successful.
-	0x01: Plugin is busy with another task at this time.
+	0x01: Plugin is busy with another task at this time. (legacy, new versions return inmediatly when busy)
 	0x02: Connection timed out.
 	
 	0x03: Login Error: Invalid login information, it means there are errors in the Cvar Strings.
@@ -126,7 +126,7 @@ Also available on `steamcore.inc`.
 	0x23: Invite Error: Logged out. Retry to login.
 	0x24: Invite Error: Inviter account is not a member of the group or does not have permissions to invite.
 	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
-	0x26: Invite Error: Unknown error. *Check link below
+	0x26: Invite Error: Probably same as 0x25. *Check link below
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
 	
 
@@ -135,7 +135,7 @@ Also available on `steamcore.inc`.
 ### Internal Processing of a Request
 Natives names and parameters are self-explanatory, but you can first understand the internal processing of a request:
 
-- When a request is made, SteamCore will first check if another request is being executed, if true, the callback function will be _almost automatically_ called (0.1 seconds delay) with `errorCode = 1`. If there is no another request being executed it will continue to the next step.
+- When a request is made, SteamCore will first check if another request is being executed, if busy, it will return _false_ inmediatly and the callback function won't be called. If there is no another request being executed it will return _true_ and continue to the next step.
 
 - Checking the Steam login status, if it's logged out it means a previous attempt to login has failed, a previous request returned a auth error, or 50 minutes have passed since the last login. 
 
@@ -158,14 +158,14 @@ Natives names and parameters are self-explanatory, but you can first understand 
 
 * When retrying a request for a second time, a login attempt will  **always** be executed before the request.
 
-* It's possible that SteamCore fails a request when believing that it's logged in and it is not, this usually happens when an user logs out the Steam account from a web browser, therefore ending any active session on that account.
+* It's possible that SteamCore fails a request when believing that it's logged in and it is not, this usually happens when an user manually logs out the Steam account from a web browser, therefore ending any active session on that account.
 
 ### Demo Code
 A very basic working code:
 
 	#include <steamcore>
 	
-    new String:groupID = "7376325";
+    new String:groupID = "103582791429521412";
     
     public OnPluginStart()
     {
@@ -176,7 +176,15 @@ A very basic working code:
     {
         decl String:announcement[256];
         GetCmdArgString(announcement, sizeof(announcement));
-        SteamGroupAnnouncement(client, announcement, "\n", groupID, myCallback);
+        if (SteamGroupAnnouncement(client, announcement, "\n", groupID, myCallback))
+	{
+	    // Request was executed, callback (myCallback) will be called.
+	}
+	else
+	{
+	    // Plugin busy, request wasn't executed and callback won't be called.
+	    // You can create a timer to retry the request later.
+	}
     }
     public myCallback(client, bool:success, errorCode, any:data)
     {
@@ -227,3 +235,12 @@ A very basic working code:
 
 > * _Announcement Module:_ **Fixed critical bug caused by outdated method to post announcements.**
 > * **Fixed critical bug that crashed the plugin when making a request while plugin is busy.**
+
+> [15/03/2017] v1.7.1
+
+> * Added minor debug text.
+
+> [03/08/2017] v1.8
+
+> * Changed the way developers have to handle busy requests.
+> * Solved a bug when a request was made while logging on map change.
