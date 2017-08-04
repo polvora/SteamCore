@@ -50,7 +50,7 @@ functag SteamCoreCallback public(client, bool:success, errorCode, any:data);
 /**
  * Returns wheter the plugin is currently busy with a request.
  *
- * @return			True is plugin is busy, false otherwise.
+ * @return			True if plugin is busy, false otherwise.
 */
 native bool:IsSteamCoreBusy();
 

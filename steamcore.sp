@@ -13,7 +13,7 @@
 #include <steamworks>
 
 #define PLUGIN_URL ""
-#define PLUGIN_VERSION "1.8"
+#define PLUGIN_VERSION "1.9"
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
 

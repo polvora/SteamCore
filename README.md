@@ -71,7 +71,7 @@ Also available on `steamcore.inc`.
 	/**
 	 * Returns wheter the plugin is currently busy with a request.
 	 *
-	 * @return			True is plugin is busy, false otherwise.
+	 * @return			True if plugin is busy, false otherwise.
 	*/
 	native bool:IsSteamCoreBusy();
 
@@ -100,6 +100,28 @@ Also available on `steamcore.inc`.
 	 */
 	native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
 
+	/**
+	 * Adds an account as a friend (they still have to accept the request).
+	 *
+	 * @param client 	Reference client, will be returned in callback.
+	 * @param friend	SteamID64 of the friend to add.
+	 * @param func		Callback function to be called at the end of the request.
+	 *
+	 * @return			True if executed, false if plugin is busy.
+	 */
+	native bool:SteamAccountAddFriend(client, const String:friend[], SteamCoreCallback:func);
+
+	/**
+	 * Removes account from friends list.
+	 *
+	 * @param client 	Reference client, will be returned in callback.
+	 * @param friend	SteamID64 of the friend to remove.
+	 * @param func		Callback function to be called at the end of the request.
+	 *
+	 * @return			True if executed, false if plugin is busy.
+	 */
+	native bool:SteamAccountRemoveFriend(client, const String:friend[], SteamCoreCallback:func);
+	
 ### Error Codes
 Also available on `steamcore.inc`.
 
@@ -129,6 +151,8 @@ Also available on `steamcore.inc`.
 	0x26: Invite Error: Probably same as 0x25. *Check link below
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
 	
+	0x30: Friend Error: Failed http friend request.
+	0x31: Friend Error: Friend request not sent.
 
 [`Error 0x26`](https://github.com/polvora/SteamCore/issues/6)
 
@@ -244,3 +268,7 @@ A very basic working code:
 
 > * Changed the way developers have to handle busy requests.
 > * Solved a bug when a request was made while logging on map change.
+
+> [03/08/2017] v1.9
+
+> * Adds natives to Add/Remove friends.
