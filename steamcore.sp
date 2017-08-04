@@ -68,6 +68,8 @@ public APLRes:AskPluginLoad2(Handle:plugin, bool:late, String:error[], err_max)
 	CreateNative("IsSteamCoreBusy", nativeIsSteamCoreBusy);
 	CreateNative("SteamGroupAnnouncement", nativeGroupAnnouncement);
 	CreateNative("SteamGroupInvite", nativeGroupInvite);
+	CreateNative("SteamAccountAddFriend", nativeAddFriend);
+	CreateNative("SteamAccountRemoveFriend", nativeRemoveFriend);
 	
 	RegPluginLibrary("steamcore");
 	
@@ -199,6 +201,59 @@ public nativeGroupInvite(Handle:plugin, numParams)
 	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "invitee", invitee);
 	
 	return _:startRequest(client, _finalRequest, cbkGroupInvite, plugin, Function:GetNativeCell(4));
+}
+
+public nativeAddFriend(Handle:plugin, numParams)
+{
+	decl String:friend[64];
+	new client = GetNativeCell(1);
+	GetNativeString(2, friend, sizeof friend);
+	
+	decl String:URL[] = "http://steamcommunity.com/actions/AddFriendAjax";
+	
+	PrintDebug(client, "\n============================================================================\n");
+	PrintDebug(client, "Preparing request to: \n%s...", URL);
+	PrintDebug(client, "Friend community ID: \n%s", friend);
+	PrintDebug(client, "Verifying login...");
+	
+	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, URL);
+	
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Accept", "*/*");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Accept-Encoding", "gzip, deflate");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64)");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Cookie", sessionCookie);
+	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "sessionID", sessionToken);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "steamid", friend);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "accept_invite", "0");
+	
+	return _:startRequest(client, _finalRequest, cbkAddFriend, plugin, Function:GetNativeCell(3));
+}
+
+public nativeRemoveFriend(Handle:plugin, numParams)
+{
+	decl String:friend[64];
+	new client = GetNativeCell(1);
+	GetNativeString(2, friend, sizeof friend);
+	
+	decl String:URL[] = "http://steamcommunity.com/actions/RemoveFriendAjax";
+	
+	PrintDebug(client, "\n============================================================================\n");
+	PrintDebug(client, "Preparing request to: \n%s...", URL);
+	PrintDebug(client, "Ex-Friend community ID: \n%s", friend);
+	PrintDebug(client, "Verifying login...");
+	
+	new Handle:_finalRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, URL);
+	
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Accept", "*/*");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Accept-Encoding", "gzip, deflate");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64)");
+	SteamWorks_SetHTTPRequestHeaderValue(_finalRequest, "Cookie", sessionCookie);
+	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "sessionID", sessionToken);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(_finalRequest, "steamid", friend);
+	
+	return _:startRequest(client, _finalRequest, cbkRemoveFriend, plugin, Function:GetNativeCell(3));
 }
 
 // ===================================================================================
@@ -627,7 +682,9 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 		else
 		{
 			PrintDebug(caller, "Invite failed. Unknown error response received when sending the group invite.");
+			//SteamWorks_WriteHTTPResponseBodyToFile(response, "xxx.html");
 			onRequestResult(caller, false, 0x26); // Unknown error
+
 		}
 	}
 	else
@@ -646,6 +703,78 @@ public cbkGroupInvite(Handle:response, bool:failure, bool:requestSuccessful, EHT
 	PrintDebug(caller, "Response body (%i):\n %s", strlen(responseBody), responseBody);
 }
 
+public cbkAddFriend(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
+{
+	stopTimeoutTimer();
+	if (connectionInterrupted) return;
+	
+	SteamWorks_WriteHTTPResponseBodyToFile(response, "xxx.html");
+	
+	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+	{
+		PrintDebug(caller, "Friend add request failed (%i). Status Code: %i", requestSuccessful, statusCode);
+		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		return;
+	}
+	
+	new bodySize;
+	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
+	new String:responseBody[bodySize];
+	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
+	
+	new Handle:regex;
+	regex = CompileRegex("\"success\":(.*?)}", PCRE_DOTALL);
+	MatchRegex(regex, responseBody);
+	decl String:result[128];
+	GetRegexSubString(regex, 1, result, sizeof(result));
+	CloseHandle(regex);
+	regex = INVALID_HANDLE;
+	
+	if (!StrEqual(result, "1"))
+	{
+		PrintDebug(caller, "Friend add request failed. Friend request not sent.");
+		onRequestResult(caller, false, 0x31); // ??
+	}
+	else
+	{
+		PrintDebug(caller, "Friend request sent.");
+		onRequestResult(caller, true); // Success
+	}
+}
+
+public cbkRemoveFriend(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
+{
+	stopTimeoutTimer();
+	if (connectionInterrupted) return;
+	
+	SteamWorks_WriteHTTPResponseBodyToFile(response, "xxx2.html");
+	
+	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+	{
+		PrintDebug(caller, "Friend remove request failed (%i). Status Code: %i", requestSuccessful, statusCode);
+		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		return;
+	}
+	
+	new bodySize;
+	SteamWorks_GetHTTPResponseBodySize(response, bodySize);
+	new String:responseBody[bodySize]; // I use new instead of decl because for some reason the null terminator is not being added.
+	SteamWorks_GetHTTPResponseBodyData(response, responseBody, bodySize);
+	
+	PrintDebug(0, responseBody);
+	
+	if (!StrEqual(responseBody, "true"))
+	{
+		PrintDebug(caller, "Friend remove request failed. Friend not removed.");
+		onRequestResult(caller, false, 0x31); // ??
+	}
+	else
+	{
+		PrintDebug(caller, "Friend removed.");
+		onRequestResult(caller, true); // Success
+	}
+}
+
 public cbkGetProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
 {
 	stopTimeoutTimer();
@@ -654,7 +783,7 @@ public cbkGetProfile(Handle:response, bool:failure, bool:requestSuccessful, EHTT
 	if (response == INVALID_HANDLE || !requestSuccessful || statusCode != k_EHTTPStatusCode200OK)
 	{
 		PrintDebug(caller, "Membership check request failed (%i). Status Code: %i", requestSuccessful, statusCode);
-		onRequestResult(caller, false, 0x30); // Failed http group invite request
+		onRequestResult(caller, false, 0x50); // Failed http group invite request
 		return;
 	}
 	

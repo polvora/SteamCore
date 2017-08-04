@@ -30,6 +30,9 @@
 	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
 	0x26: Invite Error: Probably same as 0x25.
 	0x27: Invite Error: Invitee has already received an invite or is already on the group.
+	
+	0x30: Friend Error: Failed http friend request.
+	0x31: Friend Error: Friend request not sent.
 */
 
 /**
@@ -75,6 +78,28 @@ native bool:SteamGroupAnnouncement(client, const String:title[], const String:bo
  * @return			True if executed, false if plugin is busy.
  */
 native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
+
+/**
+ * Adds an account as a friend (they still have to accept the request).
+ *
+ * @param client 	Reference client, will be returned in callback.
+ * @param friend	SteamID64 of the friend to add.
+ * @param func		Callback function to be called at the end of the request.
+ *
+ * @return			True if executed, false if plugin is busy.
+ */
+native bool:SteamAccountAddFriend(client, const String:friend[], SteamCoreCallback:func);
+
+/**
+ * Removes account from friends list.
+ *
+ * @param client 	Reference client, will be returned in callback.
+ * @param friend	SteamID64 of the friend to remove.
+ * @param func		Callback function to be called at the end of the request.
+ *
+ * @return			True if executed, false if plugin is busy.
+ */
+native bool:SteamAccountRemoveFriend(client, const String:friend[], SteamCoreCallback:func);
 
 public SharedPlugin:__pl_steamcore = 
 {
