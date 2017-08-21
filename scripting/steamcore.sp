@@ -30,7 +30,8 @@ TO-DO:
 - Separate machine cookie from login
 - Steam account handle ?? 
 - Trade ???
-- More configs (timeouts, retrys, etc.)
+- More configs (timeouts, retries, etc.)
+- Change nickname
 */
 
 public Plugin:myinfo = 

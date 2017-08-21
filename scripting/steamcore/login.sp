@@ -23,6 +23,7 @@ new bool:isLogged = false;
 new bool:isLogging = false;
 new String:loginFilePath[128];
 new Handle:loginForward;
+new login_lastError = 0x00;
 
 // Auth Code config vars
 new ReplySource:sendCodeReplySource;
@@ -45,6 +46,7 @@ OnLoginPluginStart()
 {
 	loginForward = CreateGlobalForward("OnSteamAccountLoggedIn", ET_Ignore);
 	
+	RegAdminCmd("sm_steamcore_last_error", cmdLastError, ADMFLAG_ROOT, "Gets the last login error.");
 	RegAdminCmd("sm_steamcore_send_code", cmdSendCode, ADMFLAG_ROOT, "Attempts to send the auth code to mail.");
 	RegAdminCmd("sm_steamcore_input_code", cmdInputCode, ADMFLAG_ROOT, "Sets the code needed to login and then attempts to login.");
 	
@@ -61,6 +63,13 @@ public nativeIsAccountLogged(Handle:plugin, numParams)
 bool:Login_IsAccountLogged() 
 {
 	return isLogged;
+}
+
+
+public Action:cmdLastError(client, args)
+{
+	ReplyToCommand(client, "Last login ended with error code: 0x%02X (0x00 = success).", login_lastError);
+	return Plugin_Handled;
 }
 
 public Action:cmdSendCode(client, args)
@@ -143,6 +152,9 @@ loginCallback(bool:success, errorCode=0)
 {
 	CloseHandle(login_request);
 	isLogging = false;
+	LogDebug("Login request returned with error code: %i (0 = success)", errorCode);
+	login_lastError = errorCode;
+	
 	if (sendCodeFlag) 
 	{
 		if (success)
@@ -204,8 +216,6 @@ loginCallback(bool:success, errorCode=0)
 	{
 		CreateTimer(RETRY_LOGIN_TIME, retryLogin);
 	}
-	LogDebug("Login request returned with error code: %i (0 = success)", errorCode);
-	
 }
 
 public cbkRsaKeyRequest(Handle:response, bool:failure, bool:requestSuccessful, EHTTPStatusCode:statusCode)
@@ -364,9 +374,18 @@ public cbkLoginRequest(Handle:response, bool:failure, bool:requestSuccessful, EH
 	
 	if (!StrEqual(successString, "true"))
 	{
-		LogDebug("Aborted logging, incorrect response body (%i): \n%s", strlen(responseBody), responseBody);
-		loginCallback(false, 0x07); // Incorrect login data, required captcha
-		return;
+		if (StrContains(responseBody, "\"message\":\"The account name or password that you have entered is incorrect.\"") != -1)
+		{
+			LogDebug("Aborted logging, incorrect login, data body (%i): \n%s", strlen(responseBody), responseBody);
+			loginCallback(false, 0x07); // Incorrect login data
+			return;
+		}
+		else
+		{
+			LogDebug("Aborted logging, requires captcha, data body (%i): \n%s", strlen(responseBody), responseBody);
+			loginCallback(false, 0x0C); // Requires captcha
+			return;
+		}
 	}
 	
 	SteamWorks_GetHTTPResponseHeaderValue(login_request, "Set-Cookie", login_sessionCookie, sizeof login_sessionCookie);

@@ -14,11 +14,12 @@
 	0x04(04): Login Error: Failed http RSA Key request.
 	0x05(05): Login Error: RSA Key response failed, unknown reason, probably server side.
 	0x06(06): Login Error: Failed htpps login request.
-	0x07(07): Login Error: Incorrect login data or required captcha.
+	0x07(07): Login Error: Incorrect login information.
 	0x08(08): Login Error: Failed http token request.
 	0x09(09): Login Error: Invalid session token. Incorrect cookie?.
 	0x0A(10): Login Error: Requires e-mail confirmation.
 	0x0B(11): Login Error: Steam Guard disabled, only accounts with mail confirmation allowed.
+	0x0C(12): Login Error: Requires captcha, wait a few minutes then try again.
 	
 	0x10(16): Announcement Error: Failed http group announcement request.
 	0x11(17): Announcement Error: (LEGACY, no longer used)
