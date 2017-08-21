@@ -7,7 +7,7 @@ Sourcemod natives that extends the functionality of Pawn to interact with common
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
 
 #### Table of Contents 
-* [Prerequisites](#server-owners)
+* [Server Owners](#server-owners)
 	* [Prerequisites](#prerequisites)
 	* [Install](#install)
 		* [Requirements](#requirements)
