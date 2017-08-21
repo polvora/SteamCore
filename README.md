@@ -1,221 +1,71 @@
 # SteamCore
 
-_If you see a bug, want to add a new feature or want me to make a change, you should create an issue [here](https://github.com/polvora/SteamCore/issues/new)._
+_If you see a bug, want to add a new feature or have a question, you should create an issue [here](https://github.com/polvora/SteamCore/issues/new)._
 
 Sourcemod natives that extends the functionality of Pawn to interact with common Steam functions.
 
 This is not an actual plugin, it's a library for other plugins to work and it doesn't interact directly with players in servers.
 
 #### Table of Contents 
-* [Server Owners](#for-server-owners)
-	* [Cvars](#cvars)
-		* [Mandatory](#mandatory)
-		* [Alternative](#alternative)
+* [Prerequisites](#server-owners)
+	* [Prerequisites](#prerequisites)
 	* [Install](#install)
 		* [Requirements](#requirements)
+		* [Setting Account](#setting-account)
+	* [Cvars](#cvars)
 	* [Download](#download)
 * [Script Writers](#for-scripts-writers)
-	* [Natives](#natives)
-	* [Error Codes](#error-codes)
-	* [Internal Processing of a Request](#internal-processing-of-a-request)
-	* [Demo Code](#demo-code)
 * [Changelog](#changelog)
 
-## For Server Owners
-SteamCore makes use of an account to send requests to Steam server as a normal user would do. Create a new Steam account, **login on a Steam client and deactivate Steam Guard**. 
+## Server Owners
+### Prerequisites
+SteamCore makes use of an account to send requests to Steam server as a normal user would do. To get more of this plugin, it is better to use a full steam account, read [this](https://support.steampowered.com/kb_article.php?ref=3330-IAGK-7663) to check the limitations of a limited account.
 
-**You should not use your personal account for this, it could be flagged as a spam bot.**
+The Steam account must have Steam Guard configured to send e-mail codes, so if you don't have it enabled, enable it by choosing _"Get Steam Guard codes by email"_ in [this page](https://store.steampowered.com/twofactor/manage).
 
-### Cvars
-#### Mandatory
-* `sc_username` Steam account user.  
-* `sc_password` Steam account password.
-
-_Use alphanumeric user/pass, max length: 32 characters._
-
-#### Alternative
-* `sc_debug` Toggles debug mode _(Default = 0)_.
+**I recommend you not using your personal account for this**
 
 ### Install
 #### Requirements
 * [A working version of Sourcemod](http://www.sourcemod.net/downloads.php).
-* [SteamWorks extension](https://forums.alliedmods.net/showthread.php?t=229556).
+* [SteamWorks extension](http://users.alliedmods.net/~kyles/builds/SteamWorks/).
+* [SMJansson extension](https://github.com/thraaawn/SMJansson/tree/master/bin) (.dll for Windows and .so for Linux)
 
-To install just copy `steamcore.smx` to the `plugins` folder in your Sourcemod directory.
+To install SteamCore unpack the [latest release](https://github.com/polvora/SteamCore/releases/latest) in the Sourcemod directory.
+
+To add the plugins and extensions restart the server.
+
+#### Setting Account
+After you have installed SteamCore you need to configure the Steam account's credentials, to do so open `sourcemod/configs/steamcore_login.cfg` and input the accounts credentials in the file, an example would be this:
+
+	"steamcore_login"
+	{
+		"username"	"testaccountname789"
+		"password"	"arandompassword123"
+	}
+**_Use alphanumeric user/pass, max length: 32 characters_**
+
+Now to login to Steam servers you need join the server as a player and from console or chat (i recommend console) input the next command:
+
+`sm_steamcore_send_code` or from chat `/steamcore_send_code`
+
+This will send a Steam Guard code to the configured e-mail of the account. Copy the code and input the next command with the code:
+
+`sm_steamcore_input_code YOURCODE`
+
+If everything went right, you should have now completed the setup process.
+
+### Cvars
+* `sc_debug` Toggles debug mode _(Default = 0)_.
+
+Turning debug mode on will write a lot of data in `/sourcemod/logs/steamcore_debug_DATE.cfg` only enable it if you are having problems othewise it will only put **extra load, huge files and console spam** on your server. If you need to enable it check the errors and then disable it. Never let it on all the time.
 
 ### Download
-Compiled versions: [steamcore.smx][1].
+Compiled versions: [steamcore.zip](https://github.com/polvora/SteamCore/releases/latest).
 
-[1]: https://github.com/polvora/SteamCore/releases
+## Scripts Writers
+Read the [include file](https://github.com/polvora/SteamCore/blob/master/include/steamcore.inc).
 
-If you want to compile the code yourself, you must use the offline compiler, and copy `steamcore.sp`, `steamcore/bigint.sp` and `steamcore/rsa.sp` to the scripting folder in your Sourcemod directory, also you need to copy the include file from SteamWorks to scripting/include.
-
-## For Scripts Writers
-You must add `steamcore.inc` inside your `include` folder in order to use SteamCore natives.
-
-### Natives
-Also available on `steamcore.inc`.
-	
-	/**
-	 * Callback function called at the end of a request
-	 * 
-	 * @param client 	Reference client.
-	 * @param success	Result of the request.
-	 * @param errorCode Result error code if error, otherwise 0.
-	 * @param data		Extra data if any, otherwise 0
-	 * 
-	 * @noreturn
-	 */
-	functag SteamCoreCallback public(client, bool:success, errorCode, any:data);
-
-	/**
-	 * Returns wheter the plugin is currently busy with a request.
-	 *
-	 * @return			True if plugin is busy, false otherwise.
-	*/
-	native bool:IsSteamCoreBusy();
-
-	/**
-	 * Posts an announcement on a desired Steam group. 
-	 *
-	 * @param client 	Reference client, will be returned in callback.
-	 * @param title		Title of the announce.
-	 * @param body		Body of the announce.
-	 * @param group		GroupID64 of the group.
-	 * @param func		Callback function to be called at the end of the request.
-	 * 
-	 * @return			True if executed, false if plugin is busy.
-	 */
-	native bool:SteamGroupAnnouncement(client, const String:title[], const String:body[],  const String:group[], SteamCoreCallback:func);
-
-	/**
-	 * Sends a Steam group invitation to an account.
-	 *
-	 * @param client 	Reference client, will be returned in callback.
-	 * @param invitee	SteamID64 of the account to invite.
-	 * @param group		GroupID64 of the group.
-	 * @param func		Callback function to be called at the end of the request.
-	 *
-	 * @return			True if executed, false if plugin is busy.
-	 */
-	native bool:SteamGroupInvite(client, const String:invitee[], const String:group[], SteamCoreCallback:func);
-
-	/**
-	 * Adds an account as a friend (they still have to accept the request).
-	 *
-	 * @param client 	Reference client, will be returned in callback.
-	 * @param friend	SteamID64 of the friend to add.
-	 * @param func		Callback function to be called at the end of the request.
-	 *
-	 * @return			True if executed, false if plugin is busy.
-	 */
-	native bool:SteamAccountAddFriend(client, const String:friend[], SteamCoreCallback:func);
-
-	/**
-	 * Removes account from friends list.
-	 *
-	 * @param client 	Reference client, will be returned in callback.
-	 * @param friend	SteamID64 of the friend to remove.
-	 * @param func		Callback function to be called at the end of the request.
-	 *
-	 * @return			True if executed, false if plugin is busy.
-	 */
-	native bool:SteamAccountRemoveFriend(client, const String:friend[], SteamCoreCallback:func);
-	
-### Error Codes
-Also available on `steamcore.inc`.
-
-	0x00: No error, request successful.
-	0x01: Plugin is busy with another task at this time. (legacy, new versions return inmediatly when busy)
-	0x02: Connection timed out.
-	
-	0x03: Login Error: Invalid login information, it means there are errors in the Cvar Strings.
-	0x04: Login Error: Failed http RSA Key request.
-	0x05: Login Error: RSA Key response failed, unknown reason, probably server side.
-	0x06: Login Error: Failed htpps login request.
-	0x07: Login Error: Incorrect login data OR required captcha OR e-mail confirmation (Steam Guard).
-	0x08: Login Error: Failed http token request.
-	0x09: Login Error: Invalid session token. Incorrect cookie?.
-	
-	0x10: Announcement Error: Failed http group announcement request.
-	0x11: Announcement Error: Invalid steam login token.
-	0x12: Announcement Error: Form error on request.
-	
-	// Invitee: Who receives the invite.
-	0x20: Invite Error: Failed http group invite request.
-	0x21: Invite Error: Incorrect invitee or another error.
-	0x22: Invite Error: Incorrect Group ID or missing data.
-	0x23: Invite Error: Logged out. Retry to login.
-	0x24: Invite Error: Inviter account is not a member of the group or does not have permissions to invite.
-	0x25: Invite Error: Limited account. Only full Steam accounts can send Steam group invites
-	0x26: Invite Error: Probably same as 0x25. *Check link below
-	0x27: Invite Error: Invitee has already received an invite or is already on the group.
-	
-	0x30: Friend Error: Failed http friend request.
-	0x31: Friend Error: Friend request not sent.
-
-[`Error 0x26`](https://github.com/polvora/SteamCore/issues/6)
-
-### Internal Processing of a Request
-Natives names and parameters are self-explanatory, but you can first understand the internal processing of a request:
-
-- When a request is made, SteamCore will first check if another request is being executed, if busy, it will return _false_ inmediatly and the callback function won't be called. If there is no another request being executed it will return _true_ and continue to the next step.
-
-- Checking the Steam login status, if it's logged out it means a previous attempt to login has failed, a previous request returned a auth error, or 50 minutes have passed since the last login. 
-
-    - If the server is logged in, SteamCore will automatically execute your request.
-
-    - If the server is logged out, SteamCore will first attempt to login and then execute the request.
-
-- Request is executed and callback is called.
-
-    - If the request is successful an `errorCode = 0` will be returned.
-
-    - if the request fails it can be for any reason that will be reflected in the `errorCode`. If the reason is an auth failure, next time a request is made the plugin will try to login before executing the request.
-
-**IMPORTANT NOTES:**
-
-* SteamCore automatically tries to login on map changes.
-    * This only happens 10 minutes after the last login has elapsed, this is to prevent Steam login spam on consecutive map changes.
-
-*  **LOGGING IN CAN FREEZE THE SERVER FOR A FRACTION OF A SECOND** (usually < 0.5 seconds) since a long algorithm is executed ([RSA](http://en.wikipedia.org/wiki/RSA_(cryptosystem))) in order to encrypt the login information.
-
-* When retrying a request for a second time, a login attempt will  **always** be executed before the request.
-
-* It's possible that SteamCore fails a request when believing that it's logged in and it is not, this usually happens when an user manually logs out the Steam account from a web browser, therefore ending any active session on that account.
-
-### Demo Code
-A very basic working code:
-
-	#include <steamcore>
-	
-    new String:groupID = "103582791429521412";
-    
-    public OnPluginStart()
-    {
-        RegAdminCmd("sm_announce", cmdAnnounce, ADMFLAG_CONFIG, "");
-    }
-
-    public Action:cmdAnnounce(client, args)
-    {
-        decl String:announcement[256];
-        GetCmdArgString(announcement, sizeof(announcement));
-        if (SteamGroupAnnouncement(client, announcement, "\n", groupID, myCallback))
-	{
-	    // Request was executed, callback (myCallback) will be called.
-	}
-	else
-	{
-	    // Plugin busy, request wasn't executed and callback won't be called.
-	    // You can create a timer to retry the request later.
-	}
-    }
-    public myCallback(client, bool:success, errorCode, any:data)
-    {
-        if (success) PrintToChat(client, "Success!!!");
-        else PrintToChat(client, "Failure :(");
-    }
-	
 > ### Changelog
 > [04/02/2015] v1.0 
 
@@ -272,3 +122,13 @@ A very basic working code:
 > [03/08/2017] v1.9
 
 > * Adds natives to Add/Remove friends.
+
+> [21/08/2017] v2.0
+
+> * Complete restructuring of the code.
+> * Debug now logs to file.
+> * Now plugin can handle multiple requests at the same time. No more busy requests.
+> * Steam account credentials storage is now safer.
+> * Steam Guard login is possible and mandatory.
+> * Now plugin only needs to login when server restarts. No more random logouts.
+> * Added a Steam chat module with 4 new natives to connect/disconnect from chat and send/receive messages.

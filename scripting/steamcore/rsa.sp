@@ -24,13 +24,13 @@ rsaEncrypt(const String:hexModulus[], const String:hexExponent[], const String:m
 	
 	if (!hexString2BigInt(hexModulus, modulus, sizeof(modulus)))
 	{
-		PrintDebug(GetCaller(), "Error encrypting passphrase: Invalid modulus.");
+		LogDebug("Error encrypting passphrase: Invalid modulus.");
 		return;
 	}
 	
 	if (!hexString2BigInt(hexExponent, exponent, sizeof(exponent)))
 	{
-		PrintDebug(GetCaller(), "Error encrypting passphrase: Invalid exponent.");
+		LogDebug("Error encrypting passphrase: Invalid exponent.");
 		return;
 	}
 
@@ -38,12 +38,12 @@ rsaEncrypt(const String:hexModulus[], const String:hexExponent[], const String:m
 	new mSize = k + 1;
 	if (ctSize < mSize) 
 	{
-		PrintDebug(GetCaller(), "Error encrypting passphrase: ciphertext size is can't be smaller than modulus size");
+		LogDebug("Error encrypting passphrase: ciphertext size is can't be smaller than modulus size");
 		
 	}
 	decl String:paddedMessage[mSize];
 	pkcs1v15Pad(message, k, paddedMessage, mSize);
-	PrintDebug(GetCaller(), "Padded message with PKCS#1 v1.5 standard (%i): \n%s", strlen(paddedMessage), paddedMessage);
+	LogDebug("Padded message with PKCS#1 v1.5 standard (%i): \n%s", strlen(paddedMessage), paddedMessage);
 	
 	decl numericMessage[mSize];
 	hexString2BigInt(paddedMessage, numericMessage, mSize);	
