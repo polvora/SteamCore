@@ -14,7 +14,7 @@ This is not an actual plugin, it's a library for other plugins to work and it do
 		* [Setting Account](#setting-account)
 	* [Cvars](#cvars)
 	* [Download](#download)
-* [Script Writers](#for-scripts-writers)
+* [Scripts Writers](#scripts-writers)
 * [Changelog](#changelog)
 
 ## Server Owners
