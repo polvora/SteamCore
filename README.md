@@ -65,6 +65,7 @@ Compiled versions: [steamcore.zip](https://github.com/polvora/SteamCore/releases
 
 ## Scripts Writers
 Read the [include file](https://github.com/polvora/SteamCore/blob/master/include/steamcore.inc).
+You only need the SteamCore include file to compile your plugin.
 
 > ### Changelog
 > [04/02/2015] v1.0 
