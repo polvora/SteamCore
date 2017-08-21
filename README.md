@@ -64,7 +64,7 @@ Turning debug mode on will write a lot of data in `/sourcemod/logs/steamcore_deb
 Compiled versions: [steamcore.zip](https://github.com/polvora/SteamCore/releases/latest).
 
 ## Scripts Writers
-Read the [include file](https://github.com/polvora/SteamCore/blob/master/include/steamcore.inc).
+Read the [include file](https://github.com/polvora/SteamCore/blob/master/scripting/include/steamcore.inc).
 You only need the SteamCore include file to compile your plugin.
 
 > ### Changelog
