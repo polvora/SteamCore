@@ -113,6 +113,11 @@ native bool:IsSteamAccountLogged();
 /**
  * Posts an announcement on a desired Steam group. 
  * Result will be returned in OnGroupAnnounceResult().
+ * 
+ * Notes:
+ * - Steam offers no way to tell if an announcement was successful or not. So even if the SteamCore account is not
+ * in the group callback will return with error code 0x00
+ * 
  *
  * @param title		Title of the announce.
  * @param body		Body of the announce.
