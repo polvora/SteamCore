@@ -68,6 +68,15 @@ enum SteamChatState
 	SteamChatStateLOOKINGTOPLAY = 6,
 };
 
+enum SteamChatRelationship
+{
+	SteamChatRelationshipNOTFRIENDS = 0,
+	SteamChatRelationshipFRIENDREQUESTRECEIVED = 2,
+	SteamChatRelationshipFRIENDS = 3,
+	SteamChatRelationshipFRIENDREQUESTSENT = 4,
+	
+}
+
 /**
  * GENERAL INFORMATION
  * 
@@ -272,6 +281,75 @@ forward OnChatMessageReceived(const String:friend[], const String:message[]);
  * @param state		Friend's state.
  */
 forward OnChatFriendStateChange(const String:friend[], const String:name[], SteamChatState:state);
+forward OnChatRelationshipChange(const String:account[], SteamChatRelationship:relationship);
+
+
+/* HELPER STOCKS */
+
+stock GroupID64to32(const String:GroupID64[])
+{
+	if(strlen(GroupID64) < 10) return 0;
+	
+	decl String:trimmedGroupID64[64];
+	strcopy(trimmedGroupID64, sizeof trimmedGroupID64, GroupID64[9]);
+	return (StringToInt(trimmedGroupID64) - 429521408);
+}
+
+// This function will stop working when Steam reaches 1 billion users. Currently 500 millions
+stock SteamID64to32(const String:SteamID64[])
+{
+	if (strlen(SteamID64) < 12) return -1;
+	
+	new ID32 = StringToInt(SteamID64[8]);
+	ID32 = ID32 - 960265728;
+	if (ID32 <= 0) return ID32 + 1000000000;
+	else return ID32;
+}
+
+// This function will stop working when Steam reaches 1 billion users. Currently 500 millions
+stock SteamID32to64(SteamID32, String:buffer[], maxlength)
+{
+	new ID64 = SteamID32 + 960265728;
+	if (ID64 >= 1000000000) 
+	{
+		ID64 = ID64 - 1000000000;
+		Format(buffer, maxlength, "76561198%09i", ID64);
+	}
+	else  Format(buffer, maxlength, "76561197%09i", ID64);
+}
+
+stock GetSteamID32fromClient(client)
+{
+	decl String:SteamID[32];
+	GetClientAuthId(client, AuthId_Steam3, SteamID, sizeof SteamID);
+	return StringToInt(SteamID[5]);
+}
+
+stock FindClientFromSteamID32(SteamID32)
+{
+	for (new i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && !IsFakeClient(i))
+		{
+			if (SteamID32fromClient(i) == SteamID32) return i;
+		}
+	}
+	return 0;	
+}
+
+stock FindClientFromSteamID64(const String:SteamID64[])
+{
+	new String:ID64[62];
+	for (new i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && !IsFakeClient(i))
+		{
+			GetClientAuthId(i, AuthId_SteamID64, ID64, sizeof ID64);
+			if (StrEqual(ID64, SteamID64)) return i;
+		}
+	}
+	return 0;	
+}
 
 public SharedPlugin:__pl_steamcore = 
 {
