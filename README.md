@@ -102,7 +102,7 @@ You only need the SteamCore include file to compile your plugin.
 	0x30(48): Friend Add Error: Failed http friend request.
 	0x31(49): Friend Add Error: Invited account ignored the friend request.
 	0x32(50): Friend Add Error: Invited account has blocked the SteamCore account.
-	0x32(51): Friend Add Error: SteamCore account is limited. Only full Steam accounts can send friend requests.
+	0x33(51): Friend Add Error: SteamCore account is limited. Only full Steam accounts can send friend requests.
 	0x34(52): Friend Remove Error: Failed http request.
 	
 	0x40(64): Chat Connect Error: Failed http chat connect request.
