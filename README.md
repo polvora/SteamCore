@@ -15,6 +15,7 @@ This is not an actual plugin, it's a library for other plugins to work and it do
 	* [Cvars](#cvars)
 	* [Download](#download)
 * [Scripts Writers](#scripts-writers)
+	* [Error Codes Table](#error-codes-table)
 * [Changelog](#changelog)
 
 ## Server Owners
@@ -66,6 +67,51 @@ Compiled versions: [steamcore.zip](https://github.com/polvora/SteamCore/releases
 ## Scripts Writers
 Read the [include file](https://github.com/polvora/SteamCore/blob/master/scripting/include/steamcore.inc).
 You only need the SteamCore include file to compile your plugin.
+
+### Error Codes Table
+	0x00(00): General: No error, request successful.
+	0x01(01): General: Logged out, plugin will attempt to login.
+	0x02(02): General: Connection timed out.
+	0x03(03): General: Steam servers down.
+	
+	0x04(04): Login Error: Failed http RSA Key request.
+	0x05(05): Login Error: RSA Key response failed, unknown reason, probably server side.
+	0x06(06): Login Error: Failed htpps login request.
+	0x07(07): Login Error: Incorrect login information.
+	0x08(08): Login Error: Failed http token request.
+	0x09(09): Login Error: Invalid session token. Incorrect cookie?.
+	0x0A(10): Login Error: Requires e-mail confirmation.
+	0x0B(11): Login Error: Steam Guard disabled, only accounts with mail confirmation allowed.
+	0x0C(12): Login Error: Requires captcha, wait a few minutes then try again.
+	
+	0x10(16): Announcement Error: Failed http group announcement request.
+	0x11(17): Announcement Error: (LEGACY, no longer used)
+	0x12(18): Announcement Error: Form error on request or too many consecutive requests.
+	
+	// Invitee: Who receives the invite.
+	0x20(32): Invite Error: Failed http group invite request.
+	0x21(33): Invite Error: Incorrect invitee or another error.
+	0x22(34): Invite Error: Incorrect Group ID or missing data.
+	0x23(35): Invite Error: (LEGACY, no longer used)
+	0x24(36): Invite Error: SteamCore account is not a member of the group or does not have permissions to invite.
+	0x25(37): Invite Error: Limited account. Only full Steam accounts can send Steam group invites
+	0x26(38): Invite Error: Unkown error. Check https://github.com/polvora/SteamCore/issues/6
+	0x27(39): Invite Error: Invitee has already received an invite or is already on the group.
+	0x28(40): Invite Error: Invitee must be friends with the SteamCore account to receive an invite.
+	
+	0x30(48): Friend Add Error: Failed http friend request.
+	0x31(49): Friend Add Error: Invited account ignored the friend request.
+	0x32(50): Friend Add Error: Invited account has blocked the SteamCore account.
+	0x32(51): Friend Add Error: SteamCore account is limited. Only full Steam accounts can send friend requests.
+	0x34(52): Friend Remove Error: Failed http request.
+	
+	0x40(64): Chat Connect Error: Failed http chat connect request.
+	0x41(65): Chat Connect Error: Incorrect chat connect response.
+	0x42(66): Chat Connect Error: Chat not allowed for limited accounts. Only full Steam accounts can use chat.
+	0x43(67): Chat Disconnect Error: Failed http poll request.
+	0x44(68): Chat Disconnect Error: Message poller timed out, plugin will automatically reconnect.
+	0x45(69): Chat Send Message Error: Failed http send message request.
+	0x46(70): Chat Send Message Error: Diconnected from chat, plugin will automatically reconnect.
 
 > ### Changelog
 > [04/02/2015] v1.0 
