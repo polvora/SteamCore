@@ -11,6 +11,7 @@ new Handle:disconnectedForward;
 new Handle:messageSentForward;
 new Handle:messageReceivedForward;
 new Handle:stateChangeForward;
+new Handle:relationshipChangeForward;
 
 new SteamChatMode:chatMode;
 new String:chatToken[64];
@@ -36,13 +37,14 @@ OnChatPluginStart()
 	messageSentForward = CreateGlobalForward("OnChatMessageSent", ET_Ignore, Param_String, Param_String, Param_Cell, Param_Cell);
 	messageReceivedForward = CreateGlobalForward("OnChatMessageReceived", ET_Ignore, Param_String, Param_String);
 	stateChangeForward = CreateGlobalForward("OnChatFriendStateChange", ET_Ignore, Param_String, Param_String, Param_Cell);
+	relationshipChangeForward = CreateGlobalForward("OnChatRelationshipChange", ET_Ignore, Param_String, Param_Cell);
 }
 
 Chat_OnSteamLogIn()
 {
 	if (keepConnected)
 	{
-		LogDebug("Steam account loggef in, retrying connection to chat.");
+		LogDebug("Steam account logged in, retrying connection to chat.");
 		chatConnect();
 	}
 }
@@ -290,15 +292,15 @@ public cbkPollMessage(Handle:response, bool:failure, bool:requestSuccessful, EHT
 		new Handle:messages = json_object_get(json, "messages");
 		new size = json_array_size(messages);
 		new Handle:message;
-		new String:type[16];
+		new String:type[32];
 		new String:text[256];
 		new String:persona[64];
 		new String:name[64];
-		new SteamChatState:state;
 		for (new i = 0; i < size; i++)
 		{
 			message = json_array_get(messages, i);
 			json_object_get_string(message, "type", type, sizeof type);
+			LogDebug("Found message of type: %s", type);
 			if (StrEqual(type, "saytext"))
 			{
 				json_object_get_string(message, "text", text, sizeof text);
@@ -313,7 +315,7 @@ public cbkPollMessage(Handle:response, bool:failure, bool:requestSuccessful, EHT
 				new Handle:hState = json_object_get(message, "persona_state");
 				if (hState != INVALID_HANDLE)
 				{
-					state = SteamChatState:json_integer_value(hState);
+					new SteamChatState:state = SteamChatState:json_integer_value(hState);
 					CloseHandle(hState);
 					LogDebug("State change from %s: state=%i ; name=\"%s\"", persona, state, name);
 					onStateChange(persona, name, state);
@@ -330,20 +332,15 @@ public cbkPollMessage(Handle:response, bool:failure, bool:requestSuccessful, EHT
 			}
 			else if (StrEqual(type, "personarelationship"))
 			{
-				// TO-DO
-				// SteamCore adds other account
-				// "status_flags": 1,
-                // "persona_state": 4
-				// Now friends (one accepts the other's request)
-				// "status_flags": 1,
-                // "persona_state": 3
-				// No longer friends (one removes the other)
-				// "status_flags": 1,
-                // "persona_state": 0
-				// Other account adds SteamCore
-				// "status_flags": 1,
-                // "persona_state": 2
-				// ON PERSONASTE "status_flags": 2
+				json_object_get_string(message, "steamid_from", persona, sizeof persona);
+				new Handle:hRelationship = json_object_get(message, "persona_state");
+				if (hRelationship != INVALID_HANDLE)
+				{
+					new SteamChatRelationship:relationship = SteamChatRelationship:json_integer_value(hRelationship);
+					CloseHandle(hRelationship);
+					LogDebug("Relationship change from %s: relationship=%i", persona, relationship);
+					onRelationshipChange(persona, relationship);
+				}
 			}
 			CloseHandle(message);
 		}
@@ -382,6 +379,14 @@ onStateChange(const String:friend[], const String:name[], SteamChatState:state)
 	Call_PushString(friend);
 	Call_PushString(name);
 	Call_PushCell(state);
+	Call_Finish();
+}
+
+onRelationshipChange(const String:account[], SteamChatRelationship:relationship)
+{
+	Call_StartForward(relationshipChangeForward);
+	Call_PushString(account);
+	Call_PushCell(relationship);
 	Call_Finish();
 }
 
