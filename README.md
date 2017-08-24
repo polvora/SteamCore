@@ -179,3 +179,9 @@ You only need the SteamCore include file to compile your plugin.
 > * Steam Guard login is possible and mandatory.
 > * Now plugin only needs to login when server restarts. No more random logouts.
 > * Added a Steam chat module with 4 new natives to connect/disconnect from chat and send/receive messages.
+
+> [24/08/2017] v2.1
+
+> * Added cvar sm_steamcore_last_error.
+> * Added some helper stocks for scripts writers.
+> * Added OnChatRelationshipChange() forward.

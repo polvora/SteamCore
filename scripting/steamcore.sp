@@ -16,22 +16,25 @@
 
 #define PLUGIN_NAME "SteamCore"
 #define PLUGIN_AUTHOR "Statik"
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.1"
 #define PLUGIN_URL "https://github.com/polvora/SteamCore"
 
 /**
 TO-DO:
+- cvar sm_steamcore_last_error 7
+- Helper stocks 7
 - More efficient enryption
 - Updater support ?
 - Add message queue
 - IsFriend()
 - Http wrapper
-- "personarelationship"
+- "personarelationship" 7
 - Separate machine cookie from login
 - Steam account handle ?? 
 - Trade ???
 - More configs (timeouts, retries, etc.)
 - Change nickname
+- default database
 */
 
 public Plugin:myinfo = 
