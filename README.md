@@ -54,7 +54,7 @@ This will send a Steam Guard code to the configured e-mail of the account. Copy 
 
 `sm_steamcore_input_code YOURCODE`
 
-If everything went right, you should have now completed the setup process.
+If everything went right, you should have now completed the setup process, if not use the command `sm_steamcore_last_error` to check the last error in the errors table.
 
 ### Cvars
 * `sc_debug` Toggles debug mode _(Default = 0)_.
