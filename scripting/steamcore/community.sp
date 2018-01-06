@@ -448,6 +448,30 @@ public cbkAddFriend(Handle:response, bool:failure, bool:requestSuccessful, EHTTP
 		onAddFriendResult(response, Handle:container, 0x33, data);
 		return;
 	}
+	else if (StrEqual(error, "84"))
+	{
+		LogDebug("You've been sending too many invitations lately. Please try again in a day or two.");
+		onAddFriendResult(response, Handle:container, 0x35, data);
+		return;
+	}
+	else if (StrEqual(error, "25"))
+	{
+		LogDebug("Your account friends list is full.");
+		onAddFriendResult(response, Handle:container, 0x36, data);
+		return;
+	}
+	else if (StrEqual(error, "15"))
+	{
+		LogDebug("Invited account friends list is full.");
+		onAddFriendResult(response, Handle:container, 0x37, data);
+		return;
+	}
+	else if (StrEqual(error, "11"))
+	{
+		LogDebug("You blocked the account you are trying to invite.");
+		onAddFriendResult(response, Handle:container, 0x38, data);
+		return;
+	}
 	else if (StrEqual(responseBody, "false"))
 	{
 		LogDebug("Add request failed. Plugin is not logged in. Retrying loggin.");

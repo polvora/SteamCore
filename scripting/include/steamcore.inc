@@ -41,6 +41,10 @@
 	0x32(50): Friend Add Error: Invited account has blocked the SteamCore account.
 	0x33(51): Friend Add Error: SteamCore account is limited. Only full Steam accounts can send friend requests.
 	0x34(52): Friend Remove Error: Failed http request.
+	0x35(53): Friend Add Error: SteamCore's been sending too many invitations lately. Please try again in a day or two.
+	0x36(54): Friend Add Error: SteamCore account friends list is full.
+	0x37(55): Friend Add Error: Invited account friends list is full.
+	0x38(56): Friend Add Error: You blocked the account you are trying to invite.
 	
 	0x40(64): Chat Connect Error: Failed http chat connect request.
 	0x41(65): Chat Connect Error: Incorrect chat connect response.
